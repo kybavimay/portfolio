@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTC Maxi Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --o:#f7931a;--g:#16a37a;--r:#e03a3a;--b:#378ADD;--p:#7f77dd;--am:#e07d20;
+  --bg:#0d0d0f;--bg2:#141418;--bg3:#1a1a20;--bo:rgba(255,255,255,0.07);
+  --t:#f0f0f0;--t2:#8a8a9a;--t3:#4a4a5a;
+  --mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 1.4rem;height:52px;background:var(--bg2);border-bottom:1px solid var(--bo);position:sticky;top:0;z-index:100;gap:12px;flex-wrap:wrap}
+.tlogo{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--o);letter-spacing:.08em;white-space:nowrap}
+.tprice{font-family:var(--mono);font-size:22px;font-weight:700;min-width:130px}
+.tright{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tstat{display:flex;flex-direction:column;align-items:center;gap:1px}
+.tstat-lbl{font-size:9px;color:var(--t3);letter-spacing:.05em;text-transform:uppercase;font-family:var(--mono)}
+.tstat-val{font-size:12px;font-weight:700;font-family:var(--mono)}
+.tsep{width:1px;height:24px;background:var(--bo);flex-shrink:0}
+.ldot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:3px;animation:blink 2s infinite;background:var(--t3)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+.main{padding:.85rem 1rem 3rem;display:grid;grid-template-columns:repeat(12,1fr);gap:8px;max-width:1720px;margin:0 auto}
+.card{background:var(--bg2);border:1px solid var(--bo);border-radius:9px;padding:.8rem .9rem;overflow:hidden}
+.slbl{grid-column:span 12;font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--t3);padding:3px 0 2px;border-bottom:1px solid var(--bo);margin-top:4px}
+.clbl{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.cval{font-family:var(--mono);font-size:18px;font-weight:700}
+.csub{font-size:11px;color:var(--t2);margin-top:2px}
+.bnum{font-family:var(--mono);font-size:21px;font-weight:700}
+.col-2{grid-column:span 2}.col-3{grid-column:span 3}.col-4{grid-column:span 4}
+.col-5{grid-column:span 5}.col-6{grid-column:span 6}.col-12{grid-column:span 12}
+
+/* skeleton — only shown before first data */
+.skel{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg2) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px;height:15px;margin:3px 0}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel.sm{height:10px;width:50%}.skel.lg{height:24px;width:72%}
+
+/* source badges */
+.src{font-size:8px;padding:1px 5px;border-radius:3px;font-family:var(--mono);font-weight:700}
+.src.mp{background:rgba(22,163,122,.12);color:var(--g)}
+.src.bn{background:rgba(247,147,26,.12);color:var(--o)}
+.src.alt{background:rgba(55,138,221,.12);color:var(--b)}
+.src.cg{background:rgba(224,58,58,.12);color:var(--r)}
+.src.st{background:rgba(127,119,221,.12);color:var(--p)}
+
+.fbar{height:7px;border-radius:4px;background:linear-gradient(to right,#e03a3a,#e07d20,#d4c020,#16a37a);margin:7px 0 3px;position:relative}
+.fneedle{position:absolute;top:-5px;width:2px;height:17px;background:#fff;border-radius:1px;transform:translateX(-1px)}
+.flbls{display:flex;justify-content:space-between;font-size:9px;color:var(--t3);font-family:var(--mono)}
+.htrack{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin:6px 0 3px}
+.hfill{height:100%;background:var(--o);border-radius:3px;transition:width .5s}
+.srow{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--bo);font-size:12px}
+.srow:last-child{border-bottom:none}
+.sk{color:var(--t2)}.sv{font-family:var(--mono);font-weight:700}
+.leg{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:5px;font-size:10px;color:var(--t2);font-family:var(--mono)}
+.leg span{display:flex;align-items:center;gap:3px}
+.leg b{width:8px;height:8px;border-radius:2px;display:inline-block;flex-shrink:0}
+.note{font-size:10px;color:var(--t3);font-family:var(--mono);margin-top:5px;line-height:1.5}
+.up{color:var(--g)}.dn{color:var(--r)}
+.pill{display:inline-flex;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;font-family:var(--mono)}
+.pbull{background:rgba(22,163,122,.15);color:var(--g);border:1px solid rgba(22,163,122,.25)}
+.pbear{background:rgba(224,58,58,.15);color:var(--r);border:1px solid rgba(224,58,58,.25)}
+.pneu{background:rgba(247,147,26,.15);color:var(--o);border:1px solid rgba(247,147,26,.25)}
+
+.arow{display:grid;grid-template-columns:22px 1fr auto 70px;gap:6px;align-items:center;padding:4px 6px;border-radius:5px;margin-bottom:2px;border:1px solid transparent}
+.arow.btc{background:rgba(247,147,26,.07);border-color:rgba(247,147,26,.2)}.arow.other{background:var(--bg3)}
+.ark{font-family:var(--mono);font-size:10px;color:var(--t3);text-align:center}
+.anm{font-size:11px;font-weight:500}.atp{font-size:10px;color:var(--t3)}
+.acap{font-family:var(--mono);font-size:11px;font-weight:700;text-align:right}
+.abt{height:3px;background:var(--bg2);border-radius:2px;overflow:hidden}.abf{height:100%;border-radius:2px}
+.hrow{display:grid;grid-template-columns:16px 1fr auto;gap:7px;align-items:center;padding:5px 0;border-bottom:1px solid var(--bo)}
+.hrow:last-child{border-bottom:none}
+.hrk{font-family:var(--mono);font-size:10px;color:var(--t3)}
+.hnm{font-size:11px;font-weight:500}.htp{font-size:10px;color:var(--t3)}
+.hbtc{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--o);text-align:right}
+.husd{font-size:10px;color:var(--t2);text-align:right}
+.hbtr{grid-column:2/-1;height:2px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:1px}
+.hbfl{height:100%;border-radius:2px}
+
+.nitem{padding:8px 0;border-bottom:1px solid var(--bo)}.nitem:last-child{border-bottom:none}
+.ntag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.07em;padding:1px 5px;border-radius:3px;margin-bottom:3px;font-family:var(--mono)}
+.tr{background:rgba(224,58,58,.15);color:var(--r)}.tg{background:rgba(22,163,122,.15);color:var(--g)}
+.tb{background:rgba(55,138,221,.15);color:var(--b)}.ta{background:rgba(224,125,32,.15);color:var(--am)}
+.tp{background:rgba(127,119,221,.15);color:var(--p)}
+.ntl{font-size:12px;font-weight:500;line-height:1.4;margin-bottom:2px}
+.ntl a{color:var(--t);text-decoration:none}.ntl a:hover{color:var(--o)}
+.nmt{font-size:10px;color:var(--t3);font-family:var(--mono)}
+
+.api-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:6px}
+.api-row{display:flex;align-items:center;gap:7px;padding:5px 9px;background:var(--bg3);border-radius:6px;border:1px solid var(--bo)}
+.adot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.adot.ok{background:var(--g)}.adot.fail{background:var(--r)}.adot.wait{background:var(--t3);animation:blink 1s infinite}
+.ainfo{flex:1;min-width:0}
+.aname{font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ams{font-size:10px;color:var(--t3);font-family:var(--mono)}
+.dticker{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--r)}
+.rate-row{display:flex;flex-wrap:wrap;gap:6px;font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:9px}
+.rate-chip{padding:2px 7px;border-radius:4px;border:1px solid var(--bo)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tlogo">₿ BTC MAXI DASHBOARD</div>
+  <div class="tprice" id="tb-price" style="color:var(--t2)">—</div>
+  <div class="tright">
+    <div class="tstat"><span class="tstat-lbl">24h</span><span class="tstat-val" id="tb-p24">—</span></div>
+    <div class="tsep"></div>
+    <div class="tstat"><span class="tstat-lbl">Sats/$1</span><span class="tstat-val" id="tb-sats">—</span></div>
+    <div class="tsep"></div>
+    <div class="tstat"><span class="tstat-lbl">BTC/Gold</span><span class="tstat-val" id="tb-gold">—</span></div>
+    <div class="tsep"></div>
+    <div class="tstat"><span class="tstat-lbl">Dom</span><span class="tstat-val" id="tb-dom">—</span></div>
+    <div class="tsep"></div>
+    <div class="tstat"><span class="tstat-lbl">F&G</span><span class="tstat-val" id="tb-fng">—</span></div>
+    <div class="tsep"></div>
+    <div class="tstat"><span class="tstat-lbl">Block</span><span class="tstat-val" id="tb-block">—</span></div>
+    <div class="tsep"></div>
+    <span style="font-family:var(--mono);font-size:10px;color:var(--t3)"><span class="ldot" id="ldot"></span><span id="lu">connecting…</span></span>
+  </div>
+</div>
+
+<div class="main">
+  <!-- SECTION 1 — core signals (6 × col-2) -->
+  <div class="slbl">Price & core signals</div>
+  <div class="card col-2" id="s-price"><div class="clbl">BTC price <span class="src mp">mempool</span></div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-2" id="s-sats"><div class="clbl">Sats / $1</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-2" id="s-gold"><div class="clbl">BTC / Gold <span class="src bn">Binance</span></div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-2" id="s-mc"><div class="clbl">Network value</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-2" id="s-ath"><div class="clbl">ATH distance</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-2" id="s-fng"><div class="clbl">Fear & Greed <span class="src alt">alt.me</span></div><div class="skel lg"></div><div class="skel sm"></div></div>
+
+  <!-- SECTION 2 — price charts -->
+  <div class="slbl">Price charts</div>
+  <!-- p30: header + canvas wrapper — canvas injected by JS, never replaced by patch -->
+  <div class="card col-6" id="s-p30">
+    <div class="clbl" id="lbl-p30">Price 30d <span class="src mp">mempool</span></div>
+    <div style="position:relative;height:165px"><canvas id="c_p30"></canvas></div>
+  </div>
+  <div class="card col-6" id="s-p365">
+    <div class="clbl" id="lbl-p365">Price 1y <span class="src mp">mempool</span></div>
+    <div style="position:relative;height:165px"><canvas id="c_p365"></canvas></div>
+  </div>
+  <div class="card col-4" id="s-ma">
+    <div class="clbl" id="lbl-ma">30d + 20d MA <span class="src mp">mempool</span></div>
+    <div style="position:relative;height:148px"><canvas id="c_ma"></canvas></div>
+  </div>
+  <div class="card col-4" id="s-vol30">
+    <div class="clbl" id="lbl-vol30">Volume 30d <span class="src bn">Binance</span></div>
+    <div class="leg" id="leg-vol30"></div>
+    <div style="position:relative;height:120px"><canvas id="c_vol30"></canvas></div>
+  </div>
+  <div class="card col-4" id="s-ret">
+    <div class="clbl">Returns by timeframe</div>
+    <div style="position:relative;height:148px"><canvas id="c_ret"></canvas></div>
+  </div>
+  <div class="card col-6" id="s-ohlc">
+    <div class="clbl">OHLC 14 days <span class="src bn">Binance</span></div>
+    <div class="leg"><span><b style="background:rgba(22,163,122,.75)"></b>Bullish</span><span><b style="background:rgba(224,58,58,.7)"></b>Bearish</span></div>
+    <div style="position:relative;height:148px"><canvas id="c_ohlc"></canvas></div>
+  </div>
+  <div class="card col-3" id="s-fngchart">
+    <div class="clbl" id="lbl-fng2">F&G 30 days <span class="src alt">alt.me</span></div>
+    <div id="fng-gauge"></div>
+    <div style="position:relative;height:72px"><canvas id="c_fng"></canvas></div>
+  </div>
+  <div class="card col-3" id="s-domchart">
+    <div class="clbl" id="lbl-dom">Dominance <span class="src cg" id="dom-src-tag">CoinGecko</span></div>
+    <div id="dom-header"></div>
+    <div class="leg" id="leg-dom"></div>
+    <div style="position:relative;height:95px"><canvas id="c_dom"></canvas></div>
+  </div>
+
+  <!-- SECTION 3 — network -->
+  <div class="slbl">Network <span class="src mp" style="font-size:9px">mempool.space</span></div>
+  <div class="card col-3" id="s-blocks"><div class="clbl">Block stats & fees</div><div class="skel"></div><div class="skel sm"></div></div>
+  <div class="card col-3" id="s-diff"><div class="clbl">Difficulty adjustment</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-3" id="s-hash">
+    <div class="clbl" id="lbl-hash">Hashrate <span class="src mp">mempool</span></div>
+    <div id="hash-header"></div>
+    <div style="position:relative;height:88px"><canvas id="c_hash"></canvas></div>
+  </div>
+  <div class="card col-3" id="s-halving"><div class="clbl">Halving countdown</div><div class="skel lg"></div><div class="skel sm"></div></div>
+
+  <!-- SECTION 4 — mining -->
+  <div class="slbl">Mining <span class="src mp" style="font-size:9px">mempool.space</span></div>
+  <div class="card col-4" id="s-pools">
+    <div class="clbl">Pool distribution 1w</div>
+    <div class="leg" id="leg-pools"></div>
+    <div style="position:relative;height:128px"><canvas id="c_pools"></canvas></div>
+  </div>
+  <div class="card col-4" id="s-fees-chart">
+    <div class="clbl">Block fee revenue 1m</div>
+    <div class="note" style="margin:0 0 5px">Avg fees/block in BTC. As subsidy halves, fees matter more.</div>
+    <div style="position:relative;height:130px"><canvas id="c_fees"></canvas></div>
+  </div>
+  <div class="card col-4" id="s-rewards-chart">
+    <div class="clbl">Block reward + fees 1m</div>
+    <div class="note" style="margin:0 0 5px">Total block reward (subsidy + fees). Miner security budget.</div>
+    <div style="position:relative;height:130px"><canvas id="c_rewards"></canvas></div>
+  </div>
+
+  <!-- SECTION 5 — LN + mempool -->
+  <div class="slbl">Lightning & Mempool <span class="src mp" style="font-size:9px">mempool.space</span></div>
+  <div class="card col-3" id="s-ln"><div class="clbl">Lightning Network</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-3" id="s-mem"><div class="clbl">Mempool backlog</div><div class="skel lg"></div><div class="skel sm"></div></div>
+
+  <!-- SECTION 6 — hard money -->
+  <div class="slbl">Hard money</div>
+  <div class="card col-3" id="s-supply">
+    <div class="clbl">Supply · hard cap 21M</div>
+    <div class="leg"><span><b style="background:#f7931a"></b>Mined 94.6%</span><span><b style="background:#2a2a35"></b>Unmined</span></div>
+    <div style="position:relative;height:88px"><canvas id="c_supply"></canvas></div>
+    <div id="supply-rows" style="margin-top:5px"></div>
+  </div>
+  <div class="card col-3" id="s-s2f"><div class="clbl">Stock-to-Flow · PlanB</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-3" id="s-debt"><div class="clbl">US national debt</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-3" id="s-overview"><div class="clbl">Market overview</div><div class="skel lg"></div><div class="skel sm"></div></div>
+
+  <!-- SECTION 7 — global assets + holders -->
+  <div class="slbl">BTC vs global assets <span class="src st" style="font-size:9px">BTC rank live · others ref Apr 2026</span></div>
+  <div class="card col-5" id="s-assets"><div class="clbl">Top 12 by market cap</div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+  <div class="card col-4" id="s-holders"><div class="clbl">Top 10 BTC holders <span class="src st">ref Apr 2026</span></div><div class="skel"></div><div class="skel"></div></div>
+  <div class="card col-3" id="s-halvings">
+    <div class="clbl">Halving schedule <span class="src st">fixed forever</span></div>
+    <div id="halving-rows"></div>
+  </div>
+
+  <!-- SECTION 8 — news -->
+  <div class="slbl">BTC signal <span class="src alt" style="font-size:9px">CoinDesk RSS · live</span></div>
+  <div class="card col-12" id="s-news"><div class="skel"></div><div class="skel sm"></div></div>
+
+  <!-- SECTION 9 — API status -->
+  <div class="slbl">API health & refresh rates</div>
+  <div class="card col-12">
+    <div class="rate-row">
+      <span class="rate-chip">Price — mempool <strong style="color:var(--g)">60s</strong></span>
+      <span class="rate-chip">Hist. charts — mempool <strong style="color:var(--b)">10min</strong></span>
+      <span class="rate-chip">Network — mempool <strong style="color:var(--g)">60s</strong></span>
+      <span class="rate-chip">Mining — mempool <strong style="color:var(--g)">60s</strong></span>
+      <span class="rate-chip">Lightning — mempool <strong style="color:var(--g)">60s</strong></span>
+      <span class="rate-chip">OHLC/Volume — Binance <strong style="color:var(--g)">60s</strong></span>
+      <span class="rate-chip">Gold — Binance <strong style="color:var(--g)">60s</strong></span>
+      <span class="rate-chip">F&G — alternative.me <strong style="color:var(--g)">60s</strong></span>
+      <span class="rate-chip">Dominance — CoinGecko + CoinPaprika fallback <strong style="color:var(--b)">60s</strong></span>
+      <span class="rate-chip">News — CoinDesk RSS <strong style="color:var(--b)">5min</strong></span>
+      <span class="rate-chip">Assets/Holders <strong style="color:var(--p)">static ref</strong></span>
+    </div>
+    <div class="api-grid" id="api-status"></div>
+  </div>
+  <div class="col-12" id="s-footer" style="text-align:center;font-size:10px;color:var(--t3);font-family:var(--mono);padding:6px 0">Connecting…</div>
+</div>
+
+<script>
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const f=(n,d=0)=>n==null?'—':Number(n).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d});
+const fb=n=>n==null?'—':n>=1e12?'$'+f(n/1e12,2)+'T':n>=1e9?'$'+f(n/1e9,2)+'B':'$'+f(n/1e6,1)+'M';
+const fp=(n,d=2)=>n==null?'—':(n>=0?'+':'')+Number(n).toFixed(d)+'%';
+const cl=n=>n==null?'':(n>=0?'up':'dn');
+const GC='rgba(255,255,255,.05)', TC='rgba(255,255,255,.27)';
+const MP='https://mempool.space/api', BN='https://api.binance.com/api/v3';
+
+// ─── CHART REGISTRY ───────────────────────────────────────────────────────────
+// Key insight: canvas elements are STATIC in the HTML (never replaced by innerHTML).
+// We only swap text/data in sibling divs. Charts live in fixed <canvas> tags.
+const charts={};
+
+function mkLine(id, labels, datasets, opts={}){
+  if(charts[id]){ charts[id].data.labels=labels; charts[id].data.datasets=datasets; charts[id].update('none'); return; }
+  const el=$(id); if(!el) return;
+  charts[id]=new Chart(el,{type:'line',data:{labels,datasets},options:{
+    responsive:true,maintainAspectRatio:false,animation:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label?' '+c.dataset.label+':':''} ${opts.fmt?opts.fmt(c.raw):'$'+f(c.raw)}`}}},
+    scales:{
+      x:{ticks:{color:TC,maxTicksLimit:opts.xt||6,font:{size:10}},grid:{color:GC}},
+      y:{ticks:{color:TC,font:{size:10},callback:v=>opts.fmt?opts.fmt(v):'$'+f(v)},grid:{color:GC},
+        ...(opts.mn!=null?{min:opts.mn}:{}),
+        ...(opts.mx!=null?{max:opts.mx}:{})
+      }
+    }
+  }});
+}
+
+function mkBar(id, labels, data, colors, opts={}){
+  if(charts[id]){ charts[id].data.labels=labels; charts[id].data.datasets[0].data=data; charts[id].data.datasets[0].backgroundColor=colors; charts[id].update('none'); return; }
+  const el=$(id); if(!el) return;
+  charts[id]=new Chart(el,{type:'bar',data:{labels,datasets:[{data,backgroundColor:colors,borderRadius:3,borderSkipped:false}]},options:{
+    responsive:true,maintainAspectRatio:false,animation:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>opts.fmt?opts.fmt(c.raw):c.raw}}},
+    scales:{
+      x:{ticks:{color:TC,maxTicksLimit:opts.xt||8,font:{size:10},maxRotation:0},grid:{display:false}},
+      y:{ticks:{color:TC,font:{size:10},callback:v=>opts.fmt?opts.fmt(v):v},grid:{color:GC},
+        ...(opts.mn!=null?{min:opts.mn}:{}),
+        ...(opts.mx!=null?{max:opts.mx}:{})
+      }
+    }
+  }});
+}
+
+function mkDonut(id, labels, data, colors){
+  if(charts[id]){ charts[id].data.labels=labels; charts[id].data.datasets[0].data=data; charts[id].update('none'); return; }
+  const el=$(id); if(!el) return;
+  charts[id]=new Chart(el,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}`}}}}});
+}
+
+// OHLC is special — needs destroy on data change because dataset count doesn't change but colors do
+function mkOhlc(ohlc14){
+  if(charts['c_ohlc']){ charts['c_ohlc'].destroy(); delete charts['c_ohlc']; }
+  const el=$('c_ohlc'); if(!el||!ohlc14?.length) return;
+  charts['c_ohlc']=new Chart(el,{type:'bar',
+    data:{labels:ohlc14.map(d=>d.lbl),datasets:[
+      {label:'High',data:ohlc14.map(d=>d.h),backgroundColor:ohlc14.map(d=>d.c>=d.o?'rgba(22,163,122,.75)':'rgba(224,58,58,.7)'),borderRadius:2},
+      {label:'Low', data:ohlc14.map(d=>d.l),backgroundColor:ohlc14.map(d=>d.c>=d.o?'rgba(22,163,122,.35)':'rgba(224,58,58,.3)'),borderRadius:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:c=>` ${c.dataset.label}: $${f(c.raw)}`}}},
+      scales:{x:{ticks:{color:TC,maxTicksLimit:7,font:{size:10},maxRotation:40},grid:{display:false}},
+              y:{ticks:{color:TC,font:{size:10},callback:v=>'$'+f(v)},grid:{color:GC}}}
+    }
+  });
+}
+
+// patchText: only update a div's innerHTML — canvas siblings are untouched
+function pt(id,html){ const e=$(id); if(e) e.innerHTML=html; }
+
+// ─── CACHE — never deleted, only overwritten on valid new data ────────────────
+const cache={
+  hist:null, histTs:0,   // mempool /v1/historical-price — 10min TTL
+  pools:null,            // mining pool distribution
+  feesChart:null,        // block fees 1m
+  rewardsChart:null,     // block rewards 1m
+  bnK30:null,            // Binance 30d klines (volume + closes)
+  ohlc14:null,           // Binance 14d OHLC
+};
+const HIST_TTL=10*60*1000;
+let apiStatuses={}, debtInterval=null;
+
+// ─── FETCH ────────────────────────────────────────────────────────────────────
+async function tFetch(key,url,timeout=10000){
+  const t0=Date.now();
+  apiStatuses[key]={status:'wait'};
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),timeout);
+  try{
+    const r=await fetch(url,{signal:ctrl.signal});
+    clearTimeout(tid);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    apiStatuses[key]={status:'ok',ms:Date.now()-t0};
+    return d;
+  }catch(e){
+    clearTimeout(tid);
+    apiStatuses[key]={status:'fail',ms:Date.now()-t0,err:e.name==='AbortError'?'timeout':e.message};
+    return null;
+  }
+}
+
+// /blocks/tip/height returns a plain integer, not JSON
+async function tFetchNum(key,url,timeout=8000){
+  const t0=Date.now();
+  apiStatuses[key]={status:'wait'};
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),timeout);
+  try{
+    const r=await fetch(url,{signal:ctrl.signal});
+    clearTimeout(tid);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const txt=await r.text();
+    const n=parseInt(txt.trim(),10);
+    if(isNaN(n)) throw new Error('not a number');
+    apiStatuses[key]={status:'ok',ms:Date.now()-t0};
+    return n;
+  }catch(e){
+    clearTimeout(tid);
+    apiStatuses[key]={status:'fail',ms:Date.now()-t0,err:e.name==='AbortError'?'timeout':e.message};
+    return null;
+  }
+}
+
+// ─── STATIC DATA ──────────────────────────────────────────────────────────────
+const ASSETS=[
+  {n:'Gold',t:'Commodity',cap:32.7e12,c:'#f0b90b'},
+  {n:'NVIDIA',t:'Tech',cap:4.31e12,c:'#76b900'},
+  {n:'Apple',t:'Tech',cap:3.37e12,c:'#aaa'},
+  {n:'Microsoft',t:'Tech',cap:2.773e12,c:'#0078d4'},
+  {n:'Amazon',t:'Tech',cap:2.10e12,c:'#ff9900'},
+  {n:'Alphabet',t:'Tech',cap:2.00e12,c:'#4285f4'},
+  {n:'Silver',t:'Commodity',cap:1.90e12,c:'#b4b2a9'},
+  {n:'Saudi Aramco',t:'Energy',cap:1.65e12,c:'#0070c0'},
+  {n:'Bitcoin',t:'Crypto',cap:null,c:'#f7931a',isBtc:true},
+  {n:'Meta',t:'Tech',cap:1.35e12,c:'#0082fb'},
+  {n:'TSMC',t:'Semiconductor',cap:1.00e12,c:'#e63946'},
+  {n:'Ethereum',t:'Crypto',cap:0.28e12,c:'#627eea'},
+];
+const HOLDERS=[
+  {n:'Satoshi Nakamoto',t:'Creator · unmoved since 2010',btc:1096000,c:'#f7931a'},
+  {n:'BlackRock IBIT',t:'Spot ETF',btc:772584,c:'#378ADD'},
+  {n:'Strategy (MSTR)',t:'Public company treasury',btc:762099,c:'#e03a3a'},
+  {n:'Binance',t:'Exchange (customer funds)',btc:633700,c:'#f0b90b'},
+  {n:'US Government',t:'Strategic Bitcoin Reserve',btc:328372,c:'#3a86ff'},
+  {n:'Grayscale GBTC',t:'Spot ETF / Trust',btc:209000,c:'#7f77dd'},
+  {n:'Fidelity FBTC',t:'Spot ETF',btc:195000,c:'#1d9e75'},
+  {n:'China Government',t:'Sovereign (seized)',btc:194000,c:'#888780'},
+  {n:'MARA Holdings',t:'Bitcoin miner',btc:53822,c:'#e07d20'},
+  {n:'Winklevoss / Gemini',t:'Individual investors',btc:70000,c:'#b4b2a9'},
+].sort((a,b)=>b.btc-a.btc);
+const MAX_BTC=HOLDERS[0].btc;
+// ── LIVE NEWS — multi-source RSS with 3 proxy fallbacks ─────────────────────
+// Proxy chain: rss2json.com → feed2json.org → rsshub.app (fallback)
+// Sources tried in order until one succeeds
+const NEWS_FEEDS=[
+  // CoinDesk Bitcoin RSS
+  'https://www.coindesk.com/arc/outboundfeeds/rss/?outputType=xml',
+  // Bitcoin Magazine
+  'https://bitcoinmagazine.com/.rss/full/',
+  // CoinTelegraph BTC tag
+  'https://cointelegraph.com/rss/tag/bitcoin',
+];
+const NEWS_PROXIES=[
+  // rss2json.com — most reliable, but has rate limits
+  rss=>`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rss)}&count=15`,
+  // feed2json.org — open source alternative
+  rss=>`https://feed2json.org/convert?url=${encodeURIComponent(rss)}`,
+];
+const NEWS_CACHE={items:null,ts:0};
+const NEWS_TTL=5*60*1000; // 5 minutes
+
+async function tryFeedProxy(feedUrl, proxyFn, timeout=8000){
+  try{
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),timeout);
+    const r=await fetch(proxyFn(feedUrl),{signal:ctrl.signal});
+    clearTimeout(tid);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    // rss2json format: {status, items:[]}
+    // feed2json format: {items:[{title, url, date_published, author}]}
+    const items=d.items||d.entries;
+    if(!items?.length) throw new Error('empty');
+    // Normalize to common shape
+    return items.map(i=>({
+      title: i.title||i.headline||'',
+      link:  i.link||i.url||i.id||'#',
+      pubDate: i.pubDate||i.date_published||i.published||new Date().toISOString(),
+      author: i.author?.name||i.author||i.feed_title||'',
+    })).filter(i=>i.title);
+  }catch(e){
+    return null;
+  }
+}
+
+async function fetchNews(){
+  if(NEWS_CACHE.items && Date.now()-NEWS_CACHE.ts < NEWS_TTL) return NEWS_CACHE.items;
+  // Try each feed × each proxy until we get data
+  for(const feed of NEWS_FEEDS){
+    for(const proxy of NEWS_PROXIES){
+      const items=await tryFeedProxy(feed,proxy);
+      if(items?.length){
+        const btcTerms=['bitcoin','btc','satoshi','halving','lightning','mining','etf','blockchain','crypto'];
+        const filtered=items
+          .filter(i=>btcTerms.some(t=>i.title.toLowerCase().includes(t)))
+          .slice(0,8);
+        const result=filtered.length>=3?filtered:items.slice(0,8); // fallback to all items if filter too strict
+        NEWS_CACHE.items=result;
+        NEWS_CACHE.ts=Date.now();
+        return result;
+      }
+    }
+  }
+  return NEWS_CACHE.items||null; // last good data or null
+}
+
+function renderNews(items){
+  if(!items?.length){
+    pt('s-news',`<div style="color:var(--t3);font-family:var(--mono);font-size:11px;padding:8px 0">Loading news…</div>`);
+    return;
+  }
+  // Color by simple sentiment keywords in title
+  function getTag(title){
+    const t=title.toLowerCase();
+    if(t.includes('surge')||t.includes('rally')||t.includes('bullish')||t.includes('ath')||t.includes('institutional')||t.includes('etf approval')||t.includes('adoption')) return {tag:'BULL',tc:'tg'};
+    if(t.includes('drop')||t.includes('crash')||t.includes('fall')||t.includes('bear')||t.includes('sell')||t.includes('decline')) return {tag:'BEAR',tc:'tr'};
+    if(t.includes('regulation')||t.includes('sec')||t.includes('law')||t.includes('ban')||t.includes('legal')) return {tag:'REG',tc:'tb'};
+    if(t.includes('mining')||t.includes('hashrate')||t.includes('miner')||t.includes('halving')) return {tag:'MINE',tc:'ta'};
+    if(t.includes('lightning')||t.includes('layer 2')||t.includes('network')||t.includes('protocol')) return {tag:'TECH',tc:'tp'};
+    if(t.includes('etf')||t.includes('blackrock')||t.includes('fidelity')||t.includes('institution')||t.includes('strategy')) return {tag:'INST',tc:'tg'};
+    return {tag:'BTC',tc:'tb'};
+  }
+  function relativeTime(pubDate){
+    const diff=Date.now()-new Date(pubDate).getTime();
+    const h=Math.floor(diff/3.6e6), d=Math.floor(diff/86.4e6);
+    if(d>0) return d+'d ago';
+    if(h>0) return h+'h ago';
+    return 'just now';
+  }
+  pt('s-news',`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0 2rem">
+    ${items.map(item=>{
+      const {tag,tc}=getTag(item.title||'');
+      const src=item.author||new URL(item.link||'https://coindesk.com').hostname.replace('www.','');
+      const age=relativeTime(item.pubDate||Date.now());
+      return `<div class="nitem">
+        <span class="ntag ${tc}">${tag}</span>
+        <div class="ntl"><a href="${item.link||'#'}" target="_blank" rel="noopener">${item.title||'—'}</a></div>
+        <div class="nmt">${age} · ${src}</div>
+      </div>`;
+    }).join('')}
+  </div>`);
+}
+
+// One-time static renders (supply chart, halving schedule)
+let staticRendered=false;
+function renderStaticOnce(){
+  if(staticRendered) return;
+  staticRendered=true;
+  const supply=19870000, maxS=21000000;
+  const mined=(supply/1e6).toFixed(2), unmined=((maxS-supply)/1e6).toFixed(2);
+  pt('supply-rows',`
+    <div class="srow"><span class="sk">Circulating</span><span class="sv">${f(supply/1e6,3)}M BTC</span></div>
+    <div class="srow"><span class="sk">Est. lost forever</span><span class="sv" style="color:var(--t3)">~1.5M BTC</span></div>
+    <div class="srow"><span class="sk">Effectively scarce</span><span class="sv up">~${f((supply-1500000)/1e6,2)}M BTC</span></div>
+  `);
+  mkDonut('c_supply',['Mined','Unmined'],[mined,unmined],['#f7931a','#2a2a35']);
+
+  // Halving schedule — fixed by protocol, never changes
+  const halvings=[
+    {n:1,block:210000, date:'Nov 2012',reward:25,    done:true},
+    {n:2,block:420000, date:'Jul 2016',reward:12.5,  done:true},
+    {n:3,block:630000, date:'May 2020',reward:6.25,  done:true},
+    {n:4,block:840000, date:'Apr 2024',reward:3.125, done:true},
+    {n:5,block:1050000,date:'~2028',   reward:1.5625,done:false},
+    {n:6,block:1260000,date:'~2032',   reward:0.78125,done:false},
+    {n:7,block:1470000,date:'~2036',   reward:0.390625,done:false},
+  ];
+  pt('halving-rows',`
+    <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:4px 10px;align-items:center;font-size:11px;font-family:var(--mono)">
+      <span style="color:var(--t3);font-size:9px">#</span>
+      <span style="color:var(--t3);font-size:9px">DATE</span>
+      <span style="color:var(--t3);font-size:9px">REWARD</span>
+      <span style="color:var(--t3);font-size:9px">BLOCK</span>
+      ${halvings.map(h=>`
+        <span style="color:${h.done?'var(--t3)':'var(--o)'}">${h.n}</span>
+        <span style="color:${h.done?'var(--t3)':'var(--t)'}">${h.date}</span>
+        <span style="color:${h.done?'var(--t3)':'var(--g);font-weight:700'}">${h.reward} BTC</span>
+        <span style="color:var(--t3)">${f(h.block)}</span>
+      `).join('')}
+    </div>
+    <div class="note" style="margin-top:8px">After the 33rd halving (~2140), no new BTC will ever be created. Protocol-guaranteed.</div>
+  `);
+}
+
+// ─── MAIN LOAD ────────────────────────────────────────────────────────────────
+async function loadData(){
+  $('ldot').style.background='var(--am)';
+  const now=Date.now(), needHist=now-cache.histTs>HIST_TTL;
+
+  const [
+    mpPrice, mpDiff, mpFees, mpHash, mpTip,
+    mpLn, mpMem, mpPools, mpFeesC, mpRwds,
+    bnGold, bnOhlc, bnVol,
+    fngData, cgGlobal, cpGlobal,
+    histRaw,
+  ]=await Promise.all([
+    tFetch   ('mp_price',   `${MP}/v1/prices`),
+    tFetch   ('mp_diff',    `${MP}/v1/difficulty-adjustment`),
+    tFetch   ('mp_fees',    `${MP}/v1/fees/recommended`),
+    tFetch   ('mp_hash',    `${MP}/v1/mining/hashrate/3m`),
+    tFetchNum('mp_tip',     `${MP}/blocks/tip/height`),  // plain integer response
+    tFetch   ('mp_ln',      `${MP}/v1/lightning/statistics/latest`),
+    tFetch   ('mp_mem',     `${MP}/mempool`),
+    tFetch   ('mp_pools',   `${MP}/v1/mining/pools/1w`),
+    tFetch   ('mp_fees_c',  `${MP}/v1/mining/blocks/fees/1m`),  // raw array
+    tFetch   ('mp_rwds',    `${MP}/v1/mining/blocks/rewards/1m`), // raw array
+    tFetch   ('bn_gold',    `${BN}/ticker/price?symbol=XAUUSDT`),
+    tFetch   ('bn_ohlc',    `${BN}/klines?symbol=BTCUSDT&interval=1d&limit=14`),
+    tFetch   ('bn_vol',     `${BN}/klines?symbol=BTCUSDT&interval=1d&limit=31`),
+    tFetch   ('fng',        'https://api.alternative.me/fng/?limit=30'),
+    tFetch   ('cg_dom',     'https://api.coingecko.com/api/v3/global'),
+    tFetch   ('cp_dom',     'https://api.coinpaprika.com/v1/global'),   // fallback
+    needHist ? tFetch('mp_hist',`${MP}/v1/historical-price`) : Promise.resolve(null),
+  ]);
+
+  // ── Update caches — only overwrite with valid data ────────────────────────
+  if(histRaw?.prices?.length)                           { cache.hist=histRaw; cache.histTs=now; }
+  if(mpPools?.pools?.length)                              cache.pools=mpPools;
+  if(Array.isArray(mpFeesC) && mpFeesC.length)            cache.feesChart=mpFeesC;
+  if(Array.isArray(mpRwds)  && mpRwds.length)             cache.rewardsChart=mpRwds;
+  if(Array.isArray(bnOhlc)  && bnOhlc.length)             cache.ohlc14=bnOhlc;
+  if(Array.isArray(bnVol)   && bnVol.length)              cache.bnK30=bnVol;
+
+  // ── Parse — use live or cached ────────────────────────────────────────────
+  const price     = mpPrice?.USD ?? null;
+  const sats      = price ? Math.round(1e8/price) : null;
+  const goldPrice = bnGold ? parseFloat(bnGold.price) : null;
+  const btcGold   = price && goldPrice ? price/goldPrice : null;
+  const mc        = price ? price*19870000 : null;
+  const ath=126198.07, supply=19870000, maxS=21000000;
+  const athPct    = price ? (price-ath)/ath*100 : null;
+
+  // Historical price — {prices:[{time, USD, ...}]}
+  function buildHist(days){
+    if(!cache.hist?.prices?.length) return null;
+    const cutoff=Date.now()/1000 - days*86400;
+    return cache.hist.prices
+      .filter(d=>d.time>=cutoff && d.USD!=null)
+      .sort((a,b)=>a.time-b.time)
+      .map(d=>({t:d.time*1000, p:d.USD}));
+  }
+  const hist30  = buildHist(30);
+  const hist365 = buildHist(365);
+
+  const ret7d  = hist30  && hist30.length >=8  ? (hist30[hist30.length-1].p  - hist30[hist30.length-8].p)  / hist30[hist30.length-8].p*100  : null;
+  const ret30d = hist30  && hist30.length >=2  ? (hist30[hist30.length-1].p  - hist30[0].p)                / hist30[0].p*100                 : null;
+  const ret1y  = hist365 && hist365.length>=2  ? (hist365[hist365.length-1].p- hist365[0].p)               / hist365[0].p*100                : null;
+  const ma20   = hist30  ? hist30.map((_,i,a)=>i<19?null:a.slice(i-19,i+1).reduce((s,v)=>s+v.p,0)/20) : null;
+
+  // Binance klines: [openTime,open,high,low,close,baseVol,closeTime,quoteVol,...]
+  // Use index 4=close, index 7=quoteAssetVolume (USD), NOT index 5 (base BTC vol)
+  const ohlc14   = cache.ohlc14 ? cache.ohlc14.map(k=>({
+    ts:k[0], o:parseFloat(k[1]), h:parseFloat(k[2]), l:parseFloat(k[3]), c:parseFloat(k[4]),
+    lbl:new Date(k[0]).toLocaleDateString('en-US',{month:'short',day:'numeric'})
+  })) : null;
+  const closes30 = cache.bnK30 ? cache.bnK30.map(k=>[k[0],parseFloat(k[4])]) : null;
+  const vols30   = cache.bnK30 ? cache.bnK30.map(k=>[k[0],parseFloat(k[7])]) : null; // index 7 = USD vol
+
+  // CoinGecko dominance — with CoinPaprika fallback
+  // CoinGecko: data.market_cap_percentage.btc
+  // CoinPaprika: bitcoin_dominance_percentage (only BTC dom, others not available)
+  const gd=cgGlobal?.data;
+  const cgDom    = gd?.market_cap_percentage?.btc ?? null;
+  const dom      = cgDom ?? cpGlobal?.bitcoin_dominance_percentage ?? null;
+  const ethDom   = gd?.market_cap_percentage?.eth ?? null;
+  const bnbDom   = gd?.market_cap_percentage?.bnb ?? null;
+  const solDom   = gd?.market_cap_percentage?.sol ?? null;
+  const domSrc   = cgDom!=null ? 'CoinGecko' : cpGlobal?.bitcoin_dominance_percentage!=null ? 'CoinPaprika' : null;
+
+  // F&G — data[0] is TODAY (newest). Reverse for oldest-first chart.
+  const fd      = fngData?.data;
+  const fearNow = fd?.[0] ? parseInt(fd[0].value) : null;
+  const fearLbl = fd?.[0]?.value_classification ?? null;
+  const fearCol = fearNow==null?'var(--t2)':fearNow<25?'#e03a3a':fearNow<45?'#e07d20':fearNow<55?'#d4c020':'#16a37a';
+  const fSeries = fd ? [...fd].reverse().map(d=>parseInt(d.value)) : null;
+
+  // Mempool network
+  const curBlock = typeof mpTip==='number' ? mpTip : null;
+  const fastFee  = mpFees?.fastestFee ?? null;
+  const halfFee  = mpFees?.halfHourFee ?? null;
+  const econFee  = mpFees?.economyFee  ?? null;
+  const hashNow  = mpHash?.currentHashrate ?? null;
+  const hashDiff = mpHash?.currentDifficulty ?? null;
+  const mpd      = mpDiff;
+
+  // LN — total_capacity in satoshis
+  const ln       = mpLn?.latest;
+  const lnCapBTC = ln?.total_capacity ? ln.total_capacity/1e8 : null;
+  const lnChan   = ln?.channel_count ?? null;
+  const lnNodes  = ln?.node_count ?? null;
+
+  // Mempool backlog
+  const mCount = mpMem?.count ?? null;
+  const mVsize = mpMem?.vsize ?? null;
+  const mFeeT  = mpMem?.total_fee ?? null;
+
+  // Halving
+  const halvB=1050000, lastB=840000;
+  const bLeft = curBlock ? halvB-curBlock : null;
+  const dLeft = bLeft ? Math.round(bLeft*10/60/24) : null;
+  const hProg = curBlock ? Math.min(1,(curBlock-lastB)/(halvB-lastB)) : null;
+
+  // Mining pools — blockCount field (camelCase confirmed from docs)
+  const pools = cache.pools?.pools?.slice(0,8) ?? null;
+  // Fee/reward charts — raw arrays, avgFees/avgRewards in satoshis
+  const feesChart    = cache.feesChart;
+  const rewardsChart = cache.rewardsChart;
+
+  const debtBase=36800000000000, debtPerSec=53900, pageLoad=Date.now();
+
+  // ── TOPBAR ─────────────────────────────────────────────────────────────────
+  if(price){ $('tb-price').textContent='$'+f(price); $('tb-price').style.color=ret7d!=null?(ret7d>=0?'var(--g)':'var(--r)'):'var(--t)'; }
+  if(ret7d!=null){ const e=$('tb-p24'); e.textContent=fp(ret7d)+' 7d'; e.className='tstat-val '+(ret7d>=0?'up':'dn'); }
+  if(sats)        $('tb-sats').textContent=f(sats);
+  if(btcGold)     $('tb-gold').textContent=btcGold.toFixed(1)+' oz';
+  if(dom!=null){ const e=$('tb-dom'); e.textContent=dom.toFixed(1)+'%'; e.style.color=dom>55?'var(--o)':'var(--t2)'; }
+  if(fearNow!=null){ const e=$('tb-fng'); e.textContent=fearNow+' '+fearLbl; e.style.color=fearCol; }
+  if(curBlock)    $('tb-block').textContent=f(curBlock);
+  const allOk=Object.values(apiStatuses).every(s=>s.status==='ok');
+  const anyFail=Object.values(apiStatuses).some(s=>s.status==='fail');
+  $('ldot').style.background=allOk?'var(--g)':anyFail?'var(--r)':'var(--am)';
+  $('lu').textContent='Updated '+new Date().toLocaleTimeString()+(needHist?'':' · charts cached');
+
+  // ── METRIC CARDS (text-only divs, no canvas) ───────────────────────────────
+  pt('s-price',`<div class="clbl">BTC price <span class="src mp">mempool</span></div>
+    <div class="cval" style="color:var(--o)">${price?'$'+f(price):'—'}</div>
+    <div class="csub ${cl(ret7d)}">${ret7d!=null?fp(ret7d)+' 7d':''} ${ret30d!=null?'· '+fp(ret30d)+' 30d':''}</div>`);
+  pt('s-sats',`<div class="clbl">Sats / $1</div>
+    <div class="cval" style="color:var(--o)">${sats?f(sats):'—'}</div>
+    <div class="csub" style="color:var(--t3)">As this ↓ Bitcoin wins</div>`);
+  pt('s-gold',`<div class="clbl">BTC / Gold <span class="src bn">Binance</span></div>
+    <div class="cval" style="color:var(--o)">${btcGold?btcGold.toFixed(1)+' oz':'—'}</div>
+    <div class="csub">Gold: ${goldPrice?'$'+f(goldPrice,0)+'/oz':'—'}</div>`);
+  pt('s-mc',`<div class="clbl">Network value</div>
+    <div class="cval">${fb(mc)}</div>
+    <div class="csub">${dom!=null?'Dom: '+dom.toFixed(1)+'%':''}</div>`);
+  pt('s-ath',`<div class="clbl">ATH distance</div>
+    <div class="cval ${cl(athPct)}">${athPct!=null?fp(athPct):'—'}</div>
+    <div class="csub">ATH $${f(ath)} — Oct 2025</div>`);
+  pt('s-fng',`<div class="clbl">Fear & Greed <span class="src alt">alt.me</span></div>
+    <div class="cval" style="color:${fearCol}">${fearNow??'—'}</div>
+    <div class="csub">${fearLbl??''}</div>`);
+
+  // ── PRICE CHARTS — canvas already in DOM, just update data ────────────────
+  if(hist30?.length){
+    const l30=hist30.map(p=>new Date(p.t).toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+    mkLine('c_p30',l30,[{data:hist30.map(p=>p.p),borderColor:'#f7931a',borderWidth:2,pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(247,147,26,.08)'}]);
+    if(ma20) mkLine('c_ma',l30,[
+      {label:'Price',data:hist30.map(p=>p.p),borderColor:'#f7931a',borderWidth:1.5,pointRadius:0,tension:.3,fill:false},
+      {label:'20d MA',data:ma20,borderColor:'#7f77dd',borderWidth:1.5,pointRadius:0,tension:.3,fill:false,borderDash:[4,3]}
+    ]);
+  }
+  if(hist365?.length){
+    const l365=hist365.map(p=>new Date(p.t).toLocaleDateString('en-US',{month:'short',year:'2-digit'}));
+    mkLine('c_p365',l365,[{data:hist365.map(p=>p.p),borderColor:'#378ADD',borderWidth:2,pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(55,138,221,.08)'}]);
+  }
+  if(vols30?.length && closes30?.length){
+    pt('leg-vol30',`<span><b style="background:rgba(22,163,122,.75)"></b>Up day</span><span><b style="background:rgba(224,58,58,.7)"></b>Down day</span>`);
+    const vc=closes30.map((_,i)=>i===0||closes30[i][1]>=closes30[i-1]?.[1]?'rgba(22,163,122,.75)':'rgba(224,58,58,.7)');
+    mkBar('c_vol30',vols30.map(p=>new Date(p[0]).toLocaleDateString('en-US',{month:'short',day:'numeric'})),vols30.map(p=>+(p[1]/1e9).toFixed(1)),vc,{fmt:v=>'$'+v+'B'});
+  }
+  if(ret7d!=null||ret30d!=null||ret1y!=null){
+    const rL=[],rD=[],rC=[];
+    // Round to 2dp to kill floating point noise (e.g. 0.46799999999997 -> 0.47)
+    const r2=n=>Math.round(n*100)/100;
+    if(ret7d !=null){rL.push('7d'); rD.push(r2(ret7d)); rC.push(ret7d>=0?'rgba(22,163,122,.8)':'rgba(224,58,58,.8)');}
+    if(ret30d!=null){rL.push('30d');rD.push(r2(ret30d));rC.push(ret30d>=0?'rgba(22,163,122,.8)':'rgba(224,58,58,.8)');}
+    if(ret1y !=null){rL.push('1y'); rD.push(r2(ret1y)); rC.push(ret1y>=0?'rgba(22,163,122,.8)':'rgba(224,58,58,.8)');}
+    const mn=r2(Math.min(...rD)), mx=r2(Math.max(...rD));
+    mkBar('c_ret',rL,rD,rC,{fmt:v=>Math.round(v*100)/100+'%',mn:mn<0?mn*1.35:0,mx:mx>0?mx*1.35:undefined});
+  }
+  if(ohlc14?.length) mkOhlc(ohlc14);
+
+  if(fearNow!=null){
+    pt('fng-gauge',`<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
+      <span class="bnum" style="color:${fearCol}">${fearNow}</span>
+      <span style="font-size:12px;color:var(--t2)">${fearLbl}</span>
+    </div>
+    <div class="fbar"><div class="fneedle" style="left:${fearNow}%"></div></div>
+    <div class="flbls"><span>Fear</span><span>Neutral</span><span>Greed</span></div>`);
+    if(fSeries){
+      const fBgs=fSeries.map(v=>v<25?'rgba(224,58,58,.85)':v<45?'rgba(224,125,32,.85)':v<55?'rgba(212,192,32,.85)':'rgba(22,163,122,.85)');
+      mkBar('c_fng',fSeries.map((_,i)=>i%7===0?`${30-i}d`:''),fSeries,fBgs,{mn:0,mx:100});
+    }
+  }
+  if(dom!=null){
+    const domOther=Math.max(0,+(100-dom-(ethDom||0)-(bnbDom||0)-(solDom||0)).toFixed(1));
+    const domSrcEl=$('dom-src-tag'); if(domSrcEl) domSrcEl.textContent=domSrc||'CoinGecko';
+    pt('dom-header',`<div style="display:flex;align-items:baseline;gap:7px;margin-bottom:6px">
+      <span class="bnum" style="color:var(--o)">${dom.toFixed(1)}%</span>
+      <span class="pill ${dom>55?'pbull':dom>45?'pneu':'pbear'}">${dom>55?'BTC SEASON':dom>45?'CONTESTED':'ALT SEASON'}</span>
+    </div>`);
+    pt('leg-dom',`
+      <span><b style="background:#f7931a"></b>BTC ${dom.toFixed(1)}%</span>
+      <span><b style="background:#627eea"></b>ETH ${ethDom!=null?ethDom.toFixed(1):'—'}%</span>
+      <span><b style="background:#f0b90b"></b>BNB ${bnbDom!=null?bnbDom.toFixed(1):'—'}%</span>
+      <span><b style="background:#9945ff"></b>SOL ${solDom!=null?solDom.toFixed(1):'—'}%</span>`);
+    mkDonut('c_dom',['BTC','ETH','BNB','SOL','Others'],
+      [dom.toFixed(1),(ethDom||0).toFixed(1),(bnbDom||0).toFixed(1),(solDom||0).toFixed(1),domOther],
+      ['#f7931a','#627eea','#f0b90b','#9945ff','#444455']);
+  }
+
+  // ── NETWORK ────────────────────────────────────────────────────────────────
+  pt('s-blocks',`<div class="clbl">Block stats & fees <span class="src mp">mempool</span></div>
+    <div class="srow"><span class="sk">Block height</span><span class="sv">${curBlock!=null?f(curBlock):'—'}</span></div>
+    <div class="srow"><span class="sk">Block reward</span><span class="sv">3.125 BTC${price?` (~$${f(Math.round(3.125*price/1000))}K)`:''}</span></div>
+    <div class="srow"><span class="sk">Daily miner rev.</span><span class="sv">${price?'~$'+f(Math.round(3.125*144*price/1e6))+'M':'—'}</span></div>
+    <div class="srow"><span class="sk">Fee · fastest</span><span class="sv">${fastFee!=null?fastFee+' sat/vB':'—'}</span></div>
+    <div class="srow"><span class="sk">Fee · 30 min</span><span class="sv">${halfFee!=null?halfFee+' sat/vB':'—'}</span></div>
+    <div class="srow"><span class="sk">Fee · economy</span><span class="sv">${econFee!=null?econFee+' sat/vB':'—'}</span></div>`);
+  pt('s-diff',`<div class="clbl">Difficulty adjustment <span class="src mp">mempool</span></div>
+    <div style="display:flex;align-items:baseline;gap:7px;margin:4px 0 3px">
+      <span class="bnum ${mpd?.difficultyChange!=null?cl(mpd.difficultyChange):''}">${mpd?.difficultyChange!=null?(mpd.difficultyChange>=0?'+':'')+mpd.difficultyChange.toFixed(2)+'%':'—'}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--t2)">estimated</span>
+    </div>
+    <div class="srow"><span class="sk">Epoch progress</span><span class="sv">${mpd?.progressPercent!=null?mpd.progressPercent.toFixed(1)+'%':'—'}</span></div>
+    <div class="srow"><span class="sk">Blocks remaining</span><span class="sv">${mpd?.remainingBlocks!=null?f(mpd.remainingBlocks):'—'}</span></div>
+    <div class="srow"><span class="sk">Est. retarget</span><span class="sv">${mpd?.estimatedRetargetDate?new Date(mpd.estimatedRetargetDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'}</span></div>
+    <div class="srow"><span class="sk">Prev. change</span><span class="sv ${mpd?.previousRetarget!=null?cl(mpd.previousRetarget):''}">${mpd?.previousRetarget!=null?(mpd.previousRetarget>=0?'+':'')+mpd.previousRetarget.toFixed(2)+'%':'—'}</span></div>`);
+
+  if(hashNow!=null){
+    pt('hash-header',`<div style="display:flex;align-items:baseline;gap:6px;margin:4px 0 5px">
+      <span class="bnum">${f(Math.round(hashNow/1e18))}</span>
+      <span style="font-family:var(--mono);font-size:12px;color:var(--t2)">EH/s</span>
+    </div>
+    <div class="srow" style="margin-bottom:5px"><span class="sk">Difficulty</span><span class="sv">${hashDiff?(hashDiff/1e12).toFixed(2)+'T':'—'}</span></div>`);
+    if(mpHash?.hashrates?.length){
+      const hd=mpHash.hashrates.slice(-90);
+      mkLine('c_hash',hd.map((_,i)=>i%15===0?new Date(hd[i].timestamp*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'}):''),
+        [{data:hd.map(d=>Math.round(d.avgHashrate/1e18)),borderColor:'#16a37a',borderWidth:2,pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(22,163,122,.08)'}],
+        {fmt:v=>v+'EH',mn:0});
+    }
+  }
+
+  pt('s-halving',`<div class="clbl">Halving countdown <span class="src mp">mempool</span></div>
+    <div class="bnum" style="color:var(--o);margin:4px 0 2px">${dLeft!=null?'~'+f(dLeft)+' days':'—'}</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:2px">${bLeft!=null?f(bLeft)+' blocks · target '+f(halvB):''}</div>
+    ${hProg!=null?`<div class="htrack"><div class="hfill" style="width:${Math.round(hProg*100)}%"></div></div>
+    <div style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:5px">${Math.round(hProg*100)}% into epoch</div>`:''}
+    <div class="srow"><span class="sk">Current block</span><span class="sv">${curBlock!=null?f(curBlock):'—'}</span></div>
+    <div class="srow"><span class="sk">Reward now</span><span class="sv">3.125 BTC</span></div>
+    <div class="srow"><span class="sk">After halving</span><span class="sv">1.5625 BTC</span></div>
+    <div class="srow"><span class="sk">S2F after halving</span><span class="sv up">~106 > Gold</span></div>
+    <div class="note">Hard-coded in the protocol. No bank can change it.</div>`);
+
+  // ── MINING — pool distribution uses blockCount (camelCase) ────────────────
+  if(pools?.length){
+    const PC=['#f7931a','#378ADD','#16a37a','#7f77dd','#e07d20','#e03a3a','#f0b90b','#888780'];
+    const total=pools.reduce((s,p)=>s+(p.blockCount||0),0);
+    pt('leg-pools',pools.map((p,i)=>`<span><b style="background:${PC[i]||'#888'}"></b>${p.name} ${total?(p.blockCount/total*100).toFixed(0)+'%':''}</span>`).join(''));
+    mkDonut('c_pools',pools.map(p=>p.name),pools.map(p=>p.blockCount||0),PC);
+  }
+  // fees/rewards: raw array — avgFees/avgRewards in sats, divide by 1e8 for BTC
+  if(feesChart?.length){
+    mkLine('c_fees',
+      feesChart.map(d=>new Date(d.timestamp*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'})),
+      [{data:feesChart.map(d=>+(d.avgFees/1e8).toFixed(4)),borderColor:'#e07d20',borderWidth:2,pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(224,125,32,.08)'}],
+      {fmt:v=>v+' BTC'});
+  }
+  if(rewardsChart?.length){
+    mkLine('c_rewards',
+      rewardsChart.map(d=>new Date(d.timestamp*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'})),
+      [{data:rewardsChart.map(d=>+(d.avgRewards/1e8).toFixed(4)),borderColor:'#f7931a',borderWidth:2,pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(247,147,26,.08)'}],
+      {fmt:v=>v+' BTC'});
+  }
+
+  // ── LN + MEMPOOL ──────────────────────────────────────────────────────────
+  pt('s-ln',`<div class="clbl">Lightning Network <span class="src mp">mempool</span></div>
+    <div style="display:flex;align-items:baseline;gap:7px;margin:4px 0 3px">
+      <span class="bnum" style="color:var(--o)">${lnCapBTC?lnCapBTC.toFixed(0):'—'}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--t2)">BTC capacity</span>
+    </div>
+    <div class="srow"><span class="sk">USD value</span><span class="sv">${price&&lnCapBTC?'~$'+f(Math.round(lnCapBTC*price/1e6))+'M':'—'}</span></div>
+    <div class="srow"><span class="sk">Channels</span><span class="sv">${lnChan?f(lnChan):'—'}</span></div>
+    <div class="srow"><span class="sk">Nodes</span><span class="sv">${lnNodes?f(lnNodes):'—'}</span></div>
+    <div class="srow"><span class="sk">Settlement</span><span class="sv up">Instant · ~$0</span></div>
+    <div class="note">Instant global BTC payments. No Visa. No Swift. No permission.</div>`);
+  pt('s-mem',`<div class="clbl">Mempool backlog <span class="src mp">mempool</span></div>
+    <div style="display:flex;align-items:baseline;gap:7px;margin:4px 0 3px">
+      <span class="bnum">${mCount?f(mCount):'—'}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--t2)">unconfirmed txs</span>
+    </div>
+    <div class="srow"><span class="sk">Size</span><span class="sv">${mVsize?f(Math.round(mVsize/1e6),1)+' MvB':'—'}</span></div>
+    <div class="srow"><span class="sk">Pending fees</span><span class="sv">${mFeeT?f(Math.round(mFeeT/1e8),4)+' BTC':'—'}</span></div>
+    <div class="srow"><span class="sk">Fastest fee</span><span class="sv">${fastFee!=null?fastFee+' sat/vB':'—'}</span></div>`);
+
+  // ── HARD MONEY ────────────────────────────────────────────────────────────
+  const stfModel=Math.round(Math.exp(14.6227)*Math.pow(53,3.31819));
+  pt('s-s2f',`<div class="clbl">Stock-to-Flow · PlanB</div>
+    <div style="display:flex;align-items:baseline;gap:7px;margin:4px 0 3px"><span class="bnum" style="color:var(--o)">53</span><span style="font-family:var(--mono);font-size:11px;color:var(--t2)">current SF · Gold ~60</span></div>
+    <div class="srow"><span class="sk">S2F model price</span><span class="sv" style="color:var(--p)">$${f(stfModel)}</span></div>
+    <div class="srow"><span class="sk">Deviation</span><span class="sv ${price?cl((price/stfModel-1)*100):''}">${price?fp((price/stfModel-1)*100):'—'}</span></div>
+    <div class="srow"><span class="sk">Annual issuance</span><span class="sv">${f(Math.round(3.125*144*365))} BTC</span></div>
+    <div class="srow"><span class="sk">After halving</span><span class="sv up">SF ~106 > Gold</span></div>
+    <div class="note">Each halving doubles BTC scarcity. Protocol-guaranteed.</div>`);
+
+  pt('s-debt',`<div class="clbl">US national debt</div>
+    <div style="margin:5px 0 4px">
+      <div style="font-size:9px;color:var(--t3);font-family:var(--mono);margin-bottom:2px">ESTIMATED · +$53,900/sec</div>
+      <div class="dticker" id="dticker">$${(debtBase/1e12).toFixed(3)}T</div>
+    </div>
+    <div class="srow"><span class="sk">Per US citizen</span><span class="sv dn">~$109K</span></div>
+    <div class="srow"><span class="sk">Per BTC (21M cap)</span><span class="sv dn">${price?'$'+f(Math.round(debtBase/maxS/1000))+'K':'—'}</span></div>
+    <div class="srow"><span class="sk">M2 money supply</span><span class="sv">~$21.5T</span></div>
+    <div class="srow"><span class="sk">BTC supply</span><span class="sv up">21M · fixed forever</span></div>
+    <div class="note">Printer goes brrr. Protocol says 21M. No third option.</div>`);
+  if(debtInterval){ clearInterval(debtInterval); debtInterval=null; }
+  debtInterval=setInterval(()=>{ const e=$('dticker'); if(e) e.textContent='$'+((debtBase+(Date.now()-pageLoad)/1000*debtPerSec)/1e12).toFixed(3)+'T'; },100);
+
+  pt('s-overview',`<div class="clbl">Market overview</div>
+    <div class="srow"><span class="sk">7d return</span><span class="sv ${cl(ret7d)}">${fp(ret7d)}</span></div>
+    <div class="srow"><span class="sk">30d return</span><span class="sv ${cl(ret30d)}">${fp(ret30d)}</span></div>
+    <div class="srow"><span class="sk">1y return</span><span class="sv ${cl(ret1y)}">${fp(ret1y)}</span></div>
+    <div class="srow"><span class="sk">ATH Oct 2025</span><span class="sv">$${f(ath)}</span></div>
+    <div class="srow"><span class="sk">Dominance</span><span class="sv">${dom!=null?dom.toFixed(1)+'%':'—'}</span></div>
+    <div class="srow"><span class="sk">Sats / $1</span><span class="sv" style="color:var(--o)">${sats?f(sats):'—'}</span></div>`);
+
+  // ── STATIC SECTIONS (price-dependent USD values) ──────────────────────────
+  if(price){
+    const aList=ASSETS.map(a=>({...a,cap:a.isBtc?mc:a.cap})).sort((a,b)=>(b.cap||0)-(a.cap||0)).map((a,i)=>({...a,rank:i+1}));
+    const maxCap=aList[0].cap||32.7e12, btcRank=aList.findIndex(a=>a.isBtc)+1, prev=aList[btcRank-2];
+    pt('s-assets',`<div class="clbl">Top 12 by market cap <span class="src st">BTC rank live · others ref Apr 2026</span></div>
+      ${aList.map(a=>`<div class="arow ${a.isBtc?'btc':'other'}">
+        <div class="ark" style="${a.isBtc?'color:var(--o);font-weight:700':''}">#${a.rank}</div>
+        <div><div class="anm" style="color:${a.isBtc?'var(--o)':'var(--t)'}">${a.n}${a.isBtc?' ←':''}</div><div class="atp">${a.t}</div></div>
+        <div class="acap">${a.cap?a.cap>=1e12?'$'+f(a.cap/1e12,2)+'T':'$'+f(a.cap/1e9,0)+'B':'—'}</div>
+        <div class="abt"><div class="abf" style="width:${a.cap&&maxCap?Math.round(a.cap/maxCap*100):0}%;background:${a.c}"></div></div>
+      </div>`).join('')}
+      <div class="note">To flip ${prev?.n}: ${prev?.cap?f(prev.cap/mc,2)+'x':''} · To flip Gold: ${f(32.7e12/mc,1)}x</div>`);
+    pt('s-holders',`<div class="clbl">Top 10 BTC holders <span class="src st">ref Apr 2026</span></div>
+      ${HOLDERS.map((h,i)=>`<div class="hrow">
+        <div class="hrk">${i+1}</div>
+        <div><div class="hnm">${h.n}</div><div class="htp">${h.t}</div></div>
+        <div><div class="hbtc">${f(h.btc)}</div><div class="husd">$${f(Math.round(h.btc*price/1e9),1)}B</div></div>
+        <div class="hbtr"><div class="hbfl" style="width:${Math.round(h.btc/MAX_BTC*100)}%;background:${h.c}"></div></div>
+      </div>`).join('')}
+      <div class="note">USD values update live · BTC counts: static ref</div>`);
+  }
+
+  renderStaticOnce(); // supply chart + halving schedule (run once)
+
+  // News — fetch live (5min cache), run async so it doesn't block main render
+  fetchNews().then(renderNews);
+
+  pt('s-footer',`PRIMARY: MEMPOOL.SPACE · SUPPLEMENTAL: BINANCE · ALTERNATIVE.ME · FALLBACK: COINGECKO · NEWS: COINDESK RSS via RSS2JSON · STATIC: ASSET RANKINGS · HOLDER DATA · ${new Date().toLocaleString()}`);
+
+  // API status
+  const AL={mp_price:'mempool · price',mp_hist:'mempool · history',mp_diff:'mempool · difficulty',mp_fees:'mempool · fees',mp_hash:'mempool · hashrate',mp_tip:'mempool · block height',mp_ln:'mempool · lightning',mp_mem:'mempool · backlog',mp_pools:'mempool · pools',mp_fees_c:'mempool · fee chart',mp_rwds:'mempool · rewards',bn_gold:'Binance · gold',bn_ohlc:'Binance · OHLC',bn_vol:'Binance · volume',fng:'alternative.me · F&G',cg_dom:'CoinGecko · dominance',cp_dom:'CoinPaprika · dominance'};
+  const el=$('api-status'); if(el) el.innerHTML=Object.entries(apiStatuses).map(([k,s])=>`<div class="api-row"><div class="adot ${s.status}"></div><div class="ainfo"><div class="aname">${AL[k]||k}</div><div class="ams">${s.status==='ok'?s.ms+'ms':s.status==='fail'?'✗ '+s.err:'…'}</div></div></div>`).join('');
+}
+
+loadData();
+setInterval(loadData,60000);
+</script>
+</body>
+</html>
