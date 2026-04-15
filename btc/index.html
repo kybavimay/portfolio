@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTC Maxi Dashboard — Live Bitcoin Data</title>
+<meta name="description" content="Real-time Bitcoin dashboard — price, charts, network stats, mining, Lightning, Fear &amp; Greed, holders and more. Built for Bitcoin maximalists.">
+<meta property="og:title" content="BTC Maxi Dashboard — Live Bitcoin Data">
+<meta property="og:description" content="Live Bitcoin price, hashrate, halving countdown, Lightning Network, Fear &amp; Greed, dominance and more. Updated every 60 seconds.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://btcdash.org">
+<meta property="og:image" content="https://btcdash.org/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="BTC Maxi Dashboard">
+<meta name="twitter:description" content="Live Bitcoin data: price, hashrate, halving countdown, Lightning, Fear &amp; Greed and more.">
+<meta name="twitter:image" content="https://btcdash.org/og.png">
+<meta name="theme-color" content="#f7931a">
+<link rel="canonical" href="https://btcdash.org">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f7931a'/><text x='16' y='23' text-anchor='middle' font-size='20' font-weight='bold' fill='white' font-family='Arial'>₿</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --o:#f7931a;--g:#16a37a;--r:#e03a3a;--b:#378ADD;--p:#7f77dd;--am:#e07d20;
+  --bg:#0d0d0f;--bg2:#141418;--bg3:#1a1a20;--bo:rgba(255,255,255,0.07);
+  --t:#f0f0f0;--t2:#8a8a9a;--t3:#4a4a5a;
+  --mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 1.4rem;height:52px;background:var(--bg2);border-bottom:1px solid var(--bo);position:sticky;top:0;z-index:100;gap:12px;flex-wrap:wrap}
+.tlogo{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--o);letter-spacing:.08em;white-space:nowrap;text-decoration:none}
+.tprice{font-family:var(--mono);font-size:22px;font-weight:700;min-width:130px;transition:color .4s}
+.tright{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tstat{display:flex;flex-direction:column;align-items:center;gap:1px}
+.tstat-lbl{font-size:9px;color:var(--t3);letter-spacing:.05em;text-transform:uppercase;font-family:var(--mono)}
+.tstat-val{font-size:12px;font-weight:700;font-family:var(--mono)}
+.tsep{width:1px;height:24px;background:var(--bo);flex-shrink:0}
+.ldot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:3px;background:var(--t3)}
+.ldot.live{background:var(--g);animation:blink 2s infinite}
+.ldot.loading{background:var(--am);animation:blink .8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+/* share button */
+.share-btn{background:rgba(247,147,26,.1);border:1px solid rgba(247,147,26,.25);color:var(--o);padding:4px 10px;border-radius:5px;cursor:pointer;font-family:var(--mono);font-size:10px;white-space:nowrap;transition:background .2s}
+.share-btn:hover{background:rgba(247,147,26,.2)}
+/* ── MAIN GRID ── */
+.main{padding:.85rem 1rem 3rem;display:grid;grid-template-columns:repeat(12,1fr);gap:8px;max-width:1720px;margin:0 auto}
+.card{background:var(--bg2);border:1px solid var(--bo);border-radius:9px;padding:.8rem .9rem;overflow:hidden}
+.slbl{grid-column:span 12;font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--t3);padding:3px 0 2px;border-bottom:1px solid var(--bo);margin-top:4px}
+.clbl{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.cval{font-family:var(--mono);font-size:18px;font-weight:700}
+.csub{font-size:11px;color:var(--t2);margin-top:2px}
+.bnum{font-family:var(--mono);font-size:21px;font-weight:700}
+.col-2{grid-column:span 2}.col-3{grid-column:span 3}.col-4{grid-column:span 4}
+.col-5{grid-column:span 5}.col-6{grid-column:span 6}.col-12{grid-column:span 12}
+/* ── SKELETONS ── */
+.skel{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg2) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px;height:15px;margin:3px 0}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel.sm{height:10px;width:50%}.skel.lg{height:24px;width:72%}
+/* ── SOURCE TAGS ── */
+.src{font-size:8px;padding:1px 5px;border-radius:3px;font-family:var(--mono);font-weight:700}
+.src.mp{background:rgba(22,163,122,.12);color:var(--g)}.src.bn{background:rgba(247,147,26,.12);color:var(--o)}
+.src.alt{background:rgba(55,138,221,.12);color:var(--b)}.src.cp{background:rgba(127,119,221,.12);color:var(--p)}
+.src.st{background:rgba(74,74,90,.3);color:var(--t3)}
+/* ── COMPONENTS ── */
+.fbar{height:7px;border-radius:4px;background:linear-gradient(to right,#e03a3a,#e07d20,#d4c020,#16a37a);margin:7px 0 3px;position:relative}
+.fneedle{position:absolute;top:-5px;width:2px;height:17px;background:#fff;border-radius:1px;transform:translateX(-1px)}
+.flbls{display:flex;justify-content:space-between;font-size:9px;color:var(--t3);font-family:var(--mono)}
+.htrack{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin:6px 0 3px}
+.hfill{height:100%;background:var(--o);border-radius:3px;transition:width .5s}
+.srow{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--bo);font-size:12px}
+.srow:last-child{border-bottom:none}
+.sk{color:var(--t2)}.sv{font-family:var(--mono);font-weight:700}
+.leg{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:5px;font-size:10px;color:var(--t2);font-family:var(--mono)}
+.leg span{display:flex;align-items:center;gap:3px}
+.leg b{width:8px;height:8px;border-radius:2px;display:inline-block;flex-shrink:0}
+.note{font-size:10px;color:var(--t3);font-family:var(--mono);margin-top:5px;line-height:1.5}
+.up{color:var(--g)}.dn{color:var(--r)}
+.pill{display:inline-flex;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;font-family:var(--mono)}
+.pbull{background:rgba(22,163,122,.15);color:var(--g);border:1px solid rgba(22,163,122,.25)}
+.pbear{background:rgba(224,58,58,.15);color:var(--r);border:1px solid rgba(224,58,58,.25)}
+.pneu{background:rgba(247,147,26,.15);color:var(--o);border:1px solid rgba(247,147,26,.25)}
+/* ── ASSET ROWS ── */
+.arow{display:grid;grid-template-columns:22px 1fr auto 70px;gap:6px;align-items:center;padding:4px 6px;border-radius:5px;margin-bottom:2px;border:1px solid transparent}
+.arow.btc{background:rgba(247,147,26,.07);border-color:rgba(247,147,26,.2)}.arow.other{background:var(--bg3)}
+.ark{font-family:var(--mono);font-size:10px;color:var(--t3);text-align:center}
+.anm{font-size:11px;font-weight:500}.atp{font-size:10px;color:var(--t3)}
+.acap{font-family:var(--mono);font-size:11px;font-weight:700;text-align:right}
+.abt{height:3px;background:var(--bg2);border-radius:2px;overflow:hidden}.abf{height:100%;border-radius:2px}
+/* ── HOLDER ROWS ── */
+.hrow{display:grid;grid-template-columns:16px 1fr auto;gap:7px;align-items:center;padding:5px 0;border-bottom:1px solid var(--bo)}.hrow:last-child{border-bottom:none}
+.hrk{font-family:var(--mono);font-size:10px;color:var(--t3)}.hnm{font-size:11px;font-weight:500}.htp{font-size:10px;color:var(--t3)}
+.hbtc{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--o);text-align:right}.husd{font-size:10px;color:var(--t2);text-align:right}
+.hbtr{grid-column:2/-1;height:2px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:1px}.hbfl{height:100%;border-radius:2px}
+/* ── NEWS ── */
+.nitem{padding:8px 0;border-bottom:1px solid var(--bo)}.nitem:last-child{border-bottom:none}
+.ntag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.07em;padding:1px 5px;border-radius:3px;margin-bottom:3px;font-family:var(--mono)}
+.tr{background:rgba(224,58,58,.15);color:var(--r)}.tg{background:rgba(22,163,122,.15);color:var(--g)}
+.tb{background:rgba(55,138,221,.15);color:var(--b)}.ta{background:rgba(224,125,32,.15);color:var(--am)}.tp{background:rgba(127,119,221,.15);color:var(--p)}
+.ntl{font-size:12px;font-weight:500;line-height:1.4;margin-bottom:2px}
+.ntl a{color:var(--t);text-decoration:none}.ntl a:hover{color:var(--o)}
+.nmt{font-size:10px;color:var(--t3);font-family:var(--mono)}
+/* ── API PANEL ── */
+.api-toggle{background:none;border:none;color:var(--t3);font-family:var(--mono);font-size:10px;cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:5px}
+.api-toggle:hover{color:var(--t2)}
+.api-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:6px;margin-top:8px}
+.api-row{display:flex;align-items:center;gap:7px;padding:5px 9px;background:var(--bg3);border-radius:6px;border:1px solid var(--bo)}
+.adot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.adot.ok{background:var(--g)}.adot.fail{background:var(--r)}.adot.wait{background:var(--t3);animation:blink 1s infinite}
+.ainfo{flex:1;min-width:0}.aname{font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ams{font-size:10px;color:var(--t3);font-family:var(--mono)}
+/* ── MISC ── */
+.dticker{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--r)}
+.rate-row{display:flex;flex-wrap:wrap;gap:6px;font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:9px}
+.rate-chip{padding:2px 7px;border-radius:4px;border:1px solid var(--bo)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--bg2);border:1px solid rgba(247,147,26,.4);color:var(--o);font-family:var(--mono);font-size:11px;padding:8px 16px;border-radius:6px;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;z-index:999}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ── RESPONSIVE ── */
+@media(max-width:1100px){
+  .col-2{grid-column:span 3}.col-3{grid-column:span 4}
+  .col-4{grid-column:span 6}.col-5{grid-column:span 6}.col-6{grid-column:span 12}
+}
+@media(max-width:768px){
+  .topbar{height:auto;padding:.6rem 1rem;gap:6px}
+  .tprice{font-size:18px;min-width:auto}
+  .tright{gap:6px}.tsep{display:none}
+  .tstat-lbl{font-size:8px}.tstat-val{font-size:11px}
+  .main{padding:.5rem .6rem 2rem;gap:6px}
+  .col-2,.col-3,.col-4,.col-5,.col-6{grid-column:span 6}.col-12{grid-column:span 12}
+  .arow{grid-template-columns:18px 1fr auto}.abt{display:none}.hbtr{display:none}
+  .bnum{font-size:17px}.cval{font-size:16px}
+}
+@media(max-width:480px){
+  .col-2,.col-3,.col-4,.col-5,.col-6{grid-column:span 12}
+  .topbar{flex-direction:column;align-items:flex-start;padding:.5rem .8rem}
+  .tright{width:100%;justify-content:flex-start;gap:8px}
+  .tprice{font-size:22px}
+  .main{padding:.4rem .5rem 2rem;gap:5px}
+  .card{padding:.7rem .75rem}
+  .rate-row{gap:4px}
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="topbar">
+  <div class="tlogo">₿ BTC MAXI DASHBOARD</div>
+  <div class="tprice" id="tb-price" style="color:var(--t2)">—</div>
+  <div class="tright">
+    <div class="tstat"><span class="tstat-lbl">24h</span><span class="tstat-val" id="tb-p24">—</span></div>
+    <div class="tsep"></div>
+    <div class="tstat"><span class="tstat-lbl">Sats/$1</span><span class="tstat-val" id="tb-sats">—</span></div>
+    <div class="tsep"></div>
+    <div class="tstat"><span class="tstat-lbl">BTC/Gold</span><span class="tstat-val" id="tb-gold">—</span></div>
+    <div class="tsep"></div>
+    <div class="tstat"><span class="tstat-lbl">Dom</span><span class="tstat-val" id="tb-dom">—</span></div>
+    <div class="tsep"></div>
+    <div class="tstat"><span class="tstat-lbl">F&G</span><span class="tstat-val" id="tb-fng">—</span></div>
+    <div class="tsep"></div>
+    <div class="tstat"><span class="tstat-lbl">Block</span><span class="tstat-val" id="tb-block">—</span></div>
+    <div class="tsep"></div>
+    <span style="font-family:var(--mono);font-size:10px;color:var(--t3)"><span class="ldot" id="ldot"></span><span id="lu">connecting…</span></span>
+    <button class="share-btn" onclick="shareUrl()">⎘ Share</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- PRICE & CORE SIGNALS -->
+  <div class="slbl">Price & core signals</div>
+  <div class="card col-2" id="s-price"><div class="clbl">BTC price</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-2" id="s-sats"><div class="clbl">Sats per dollar</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-2" id="s-gold"><div class="clbl">BTC / Gold</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-2" id="s-mc"><div class="clbl">Network value</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-2" id="s-ath"><div class="clbl">ATH distance</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-2" id="s-fng"><div class="clbl">Fear & Greed</div><div class="skel lg"></div><div class="skel sm"></div></div>
+
+  <!-- PRICE CHARTS -->
+  <div class="slbl">Price charts <span class="src mp" style="font-size:9px">mempool.space</span></div>
+  <div class="card col-6" id="s-p30"><div class="clbl">Price — 30 days <span class="src mp">mempool</span></div><div style="position:relative;height:165px"><canvas id="c_p30"></canvas></div></div>
+  <div class="card col-6" id="s-p365"><div class="clbl">Price — 1 year <span class="src mp">mempool</span></div><div style="position:relative;height:165px"><canvas id="c_p365"></canvas></div></div>
+  <div class="card col-4" id="s-ma"><div class="clbl">30d + 20d MA <span class="src mp">mempool</span></div><div style="position:relative;height:148px"><canvas id="c_ma"></canvas></div></div>
+  <div class="card col-4" id="s-vol30"><div class="clbl">Volume 30d <span class="src bn">Binance</span></div><div class="leg" id="leg-vol30"></div><div style="position:relative;height:120px"><canvas id="c_vol30"></canvas></div></div>
+  <div class="card col-4" id="s-ret"><div class="clbl">Returns by timeframe</div><div style="position:relative;height:148px"><canvas id="c_ret"></canvas></div></div>
+  <div class="card col-6" id="s-ohlc"><div class="clbl">OHLC 14 days <span class="src bn">Binance</span></div><div class="leg"><span><b style="background:rgba(22,163,122,.75)"></b>Bullish</span><span><b style="background:rgba(224,58,58,.7)"></b>Bearish</span></div><div style="position:relative;height:148px"><canvas id="c_ohlc"></canvas></div></div>
+  <div class="card col-3" id="s-fngchart"><div class="clbl">F&G 30 days <span class="src alt">alt.me</span></div><div id="fng-gauge"></div><div style="position:relative;height:72px"><canvas id="c_fng"></canvas></div></div>
+  <div class="card col-3" id="s-domchart"><div class="clbl">Dominance <span class="src cp" id="dom-src-tag">CoinPaprika</span></div><div id="dom-header"></div><div class="leg" id="leg-dom"></div><div style="position:relative;height:95px"><canvas id="c_dom"></canvas></div></div>
+
+  <!-- NETWORK -->
+  <div class="slbl">Network <span class="src mp" style="font-size:9px">mempool.space</span></div>
+  <div class="card col-3" id="s-blocks"><div class="clbl">Block stats & fees</div><div class="skel"></div><div class="skel sm"></div></div>
+  <div class="card col-3" id="s-diff"><div class="clbl">Difficulty adjustment</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-3" id="s-hash"><div class="clbl">Hashrate <span class="src mp">mempool</span></div><div id="hash-header"></div><div style="position:relative;height:88px"><canvas id="c_hash"></canvas></div></div>
+  <div class="card col-3" id="s-halving"><div class="clbl">Halving countdown</div><div class="skel lg"></div><div class="skel sm"></div></div>
+
+  <!-- MINING -->
+  <div class="slbl">Mining <span class="src mp" style="font-size:9px">mempool.space</span></div>
+  <div class="card col-4" id="s-pools"><div class="clbl">Pool distribution 1w</div><div class="leg" id="leg-pools"></div><div style="position:relative;height:128px"><canvas id="c_pools"></canvas></div></div>
+  <div class="card col-4" id="s-fees-chart"><div class="clbl">Block fee revenue 1m</div><div class="note" style="margin:0 0 5px">Avg fees/block (BTC). As subsidy halves, fees matter more.</div><div style="position:relative;height:130px"><canvas id="c_fees"></canvas></div></div>
+  <div class="card col-4" id="s-rewards-chart"><div class="clbl">Block reward + fees 1m</div><div class="note" style="margin:0 0 5px">Total miner reward (subsidy + fees). Security budget.</div><div style="position:relative;height:130px"><canvas id="c_rewards"></canvas></div></div>
+
+  <!-- LIGHTNING & MEMPOOL -->
+  <div class="slbl">Lightning & Mempool <span class="src mp" style="font-size:9px">mempool.space</span></div>
+  <div class="card col-3" id="s-ln"><div class="clbl">Lightning Network</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-3" id="s-mem"><div class="clbl">Mempool backlog</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-3" id="s-avgblock"><div class="clbl">Avg block time</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-3" id="s-txday"><div class="clbl">Transactions / day</div><div class="skel lg"></div><div class="skel sm"></div></div>
+
+  <!-- HARD MONEY -->
+  <div class="slbl">Hard money</div>
+  <div class="card col-3" id="s-supply">
+    <div class="clbl">Supply · hard cap 21M</div>
+    <div class="leg"><span><b style="background:#f7931a"></b>Mined 94.6%</span><span><b style="background:#2a2a35"></b>Unmined</span></div>
+    <div style="position:relative;height:88px"><canvas id="c_supply"></canvas></div>
+    <div id="supply-rows" style="margin-top:5px"></div>
+  </div>
+  <div class="card col-3" id="s-s2f"><div class="clbl">Stock-to-Flow · PlanB</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-3" id="s-debt"><div class="clbl">US national debt</div><div class="skel lg"></div><div class="skel sm"></div></div>
+  <div class="card col-3" id="s-overview"><div class="clbl">Market overview</div><div class="skel lg"></div><div class="skel sm"></div></div>
+
+  <!-- BTC VS GLOBAL ASSETS -->
+  <div class="slbl">BTC vs global assets <span class="src st" style="font-size:9px">BTC rank live · others ref Apr 2026</span></div>
+  <div class="card col-5" id="s-assets"><div class="clbl">Top 12 by market cap</div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+  <div class="card col-4" id="s-holders"><div class="clbl">Top 10 BTC holders <span class="src st">ref Apr 2026</span></div><div class="skel"></div><div class="skel"></div></div>
+  <div class="card col-3" id="s-halvings"><div class="clbl">Halving schedule <span class="src st">fixed forever</span></div><div id="halving-rows"></div></div>
+
+  <!-- BTC SIGNAL / NEWS -->
+  <div class="slbl">BTC signal <span class="src alt" style="font-size:9px">CryptoCompare · live</span></div>
+  <div class="card col-12" id="s-news"><div class="skel"></div><div class="skel sm"></div></div>
+
+  <!-- API HEALTH (collapsible) -->
+  <div class="slbl">Developer</div>
+  <div class="card col-12">
+    <button class="api-toggle" id="api-toggle" onclick="toggleApiPanel()">
+      <span id="api-toggle-icon">▶</span> API health & refresh rates
+    </button>
+    <div id="api-panel" style="display:none">
+      <div class="rate-row" style="margin-top:10px">
+        <span class="rate-chip">Price — mempool <strong style="color:var(--g)">60s</strong></span>
+        <span class="rate-chip">Hist. charts — mempool <strong style="color:var(--b)">10min</strong></span>
+        <span class="rate-chip">Network/Mining — mempool <strong style="color:var(--g)">60s</strong></span>
+        <span class="rate-chip">OHLC/Volume — Binance <strong style="color:var(--g)">60s</strong></span>
+        <span class="rate-chip">Gold — Binance <strong style="color:var(--g)">60s</strong></span>
+        <span class="rate-chip">F&G — alternative.me <strong style="color:var(--g)">60s</strong></span>
+        <span class="rate-chip">Dominance — CoinPaprika <strong style="color:var(--g)">60s</strong></span>
+        <span class="rate-chip">News — CryptoCompare <strong style="color:var(--b)">5min</strong></span>
+        <span class="rate-chip">Assets/Holders <strong style="color:var(--p)">static ref</strong></span>
+      </div>
+      <div class="api-grid" id="api-status"></div>
+    </div>
+  </div>
+
+  <div class="col-12" id="s-footer" style="text-align:center;font-size:10px;color:var(--t3);font-family:var(--mono);padding:6px 0">Connecting…</div>
+</div>
+
+<script>
+// ── SECURITY ──────────────────────────────────────────────────────────────────
+function esc(s){return s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function safeUrl(u){try{const p=new URL(u).protocol;return(p==='https:'||p==='http:')?u:'#';}catch{return'#';}}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const f=(n,d=0)=>n==null?'—':Number(n).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d});
+const fb=n=>n==null?'—':n>=1e12?'$'+f(n/1e12,2)+'T':n>=1e9?'$'+f(n/1e9,2)+'B':'$'+f(n/1e6,1)+'M';
+const fp=(n,d=2)=>n==null?'—':(n>=0?'+':'')+Number(n).toFixed(d)+'%';
+const cl=n=>n==null?'':(n>=0?'up':'dn');
+const r2=n=>Math.round(n*100)/100;
+const GC='rgba(255,255,255,.05)',TC='rgba(255,255,255,.27)';
+const MP='https://mempool.space/api',BN='https://api.binance.com/api/v3';
+function pt(id,html){const e=$(id);if(e)e.innerHTML=html;}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg){
+  const t=$('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── SHARE ─────────────────────────────────────────────────────────────────────
+function shareUrl(){
+  const url=window.location.href;
+  if(navigator.share){navigator.share({title:'BTC Maxi Dashboard',url}).catch(()=>{});}
+  else if(navigator.clipboard){navigator.clipboard.writeText(url).then(()=>showToast('Link copied to clipboard'));}
+  else{showToast('btcdash.org');}
+}
+
+// ── API PANEL TOGGLE ──────────────────────────────────────────────────────────
+function toggleApiPanel(){
+  const p=$('api-panel'),i=$('api-toggle-icon');
+  const open=p.style.display==='none';
+  p.style.display=open?'block':'none';
+  i.textContent=open?'▼':'▶';
+}
+
+// ── CHARTS ───────────────────────────────────────────────────────────────────
+const charts={};
+function mkLine(id,labels,datasets,opts={}){
+  if(charts[id]){charts[id].data.labels=labels;charts[id].data.datasets=datasets;charts[id].update('none');return;}
+  const el=$(id);if(!el)return;
+  charts[id]=new Chart(el,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label?' '+c.dataset.label+':':''} ${opts.fmt?opts.fmt(c.raw):'$'+f(c.raw)}`}}},
+    scales:{x:{ticks:{color:TC,maxTicksLimit:opts.xt||6,font:{size:10}},grid:{color:GC}},
+            y:{ticks:{color:TC,font:{size:10},callback:v=>opts.fmt?opts.fmt(v):'$'+f(v)},grid:{color:GC},...(opts.mn!=null?{min:opts.mn}:{}),...(opts.mx!=null?{max:opts.mx}:{})}}}});
+}
+function mkBar(id,labels,data,colors,opts={}){
+  if(charts[id]){charts[id].data.labels=labels;charts[id].data.datasets[0].data=data;charts[id].data.datasets[0].backgroundColor=colors;charts[id].update('none');return;}
+  const el=$(id);if(!el)return;
+  charts[id]=new Chart(el,{type:'bar',data:{labels,datasets:[{data,backgroundColor:colors,borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,animation:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>opts.fmt?opts.fmt(c.raw):c.raw}}},
+    scales:{x:{ticks:{color:TC,maxTicksLimit:opts.xt||8,font:{size:10},maxRotation:0},grid:{display:false}},
+            y:{ticks:{color:TC,font:{size:10},callback:v=>opts.fmt?opts.fmt(v):v},grid:{color:GC},...(opts.mn!=null?{min:opts.mn}:{}),...(opts.mx!=null?{max:opts.mx}:{})}}}});
+}
+function mkDonut(id,labels,data,colors){
+  if(charts[id]){charts[id].data.labels=labels;charts[id].data.datasets[0].data=data;charts[id].update('none');return;}
+  const el=$(id);if(!el)return;
+  charts[id]=new Chart(el,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}`}}}}});
+}
+function mkOhlc(d14){
+  if(charts['c_ohlc']){charts['c_ohlc'].destroy();delete charts['c_ohlc'];}
+  const el=$('c_ohlc');if(!el||!d14?.length)return;
+  charts['c_ohlc']=new Chart(el,{type:'bar',data:{labels:d14.map(d=>d.lbl),datasets:[
+    {label:'High',data:d14.map(d=>d.h),backgroundColor:d14.map(d=>d.c>=d.o?'rgba(22,163,122,.75)':'rgba(224,58,58,.7)'),borderRadius:2},
+    {label:'Low', data:d14.map(d=>d.l),backgroundColor:d14.map(d=>d.c>=d.o?'rgba(22,163,122,.35)':'rgba(224,58,58,.3)'),borderRadius:2}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:c=>` ${c.dataset.label}: $${f(c.raw)}`}}},
+      scales:{x:{ticks:{color:TC,maxTicksLimit:7,font:{size:10},maxRotation:40},grid:{display:false}},y:{ticks:{color:TC,font:{size:10},callback:v=>'$'+f(v)},grid:{color:GC}}}}});
+}
+
+// ── CACHE ─────────────────────────────────────────────────────────────────────
+const cache={hist:null,histTs:0,pools:null,feesChart:null,rewardsChart:null,bnK30:null,ohlc14:null};
+const HIST_TTL=10*60*1000;
+let apiStatuses={},debtInterval=null;
+
+// ── FETCH ─────────────────────────────────────────────────────────────────────
+async function tFetch(key,url,timeout=10000){
+  const t0=Date.now();apiStatuses[key]={status:'wait'};
+  const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),timeout);
+  try{const r=await fetch(url,{signal:ctrl.signal});clearTimeout(tid);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();apiStatuses[key]={status:'ok',ms:Date.now()-t0};return d;}
+  catch(e){clearTimeout(tid);apiStatuses[key]={status:'fail',ms:Date.now()-t0,err:e.name==='AbortError'?'timeout':e.message};return null;}
+}
+async function tFetchNum(key,url,timeout=8000){
+  const t0=Date.now();apiStatuses[key]={status:'wait'};
+  const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),timeout);
+  try{const r=await fetch(url,{signal:ctrl.signal});clearTimeout(tid);if(!r.ok)throw new Error('HTTP '+r.status);const n=parseInt((await r.text()).trim(),10);if(isNaN(n))throw new Error('NaN');apiStatuses[key]={status:'ok',ms:Date.now()-t0};return n;}
+  catch(e){clearTimeout(tid);apiStatuses[key]={status:'fail',ms:Date.now()-t0,err:e.name==='AbortError'?'timeout':e.message};return null;}
+}
+
+// ── NEWS ─────────────────────────────────────────────────────────────────────
+// Strategy: 3-source chain, all with confirmed browser CORS support
+// 1. CryptoCompare — proper Access-Control-Allow-Origin:* headers, no key needed
+// 2. CryptoCompare latest BTC news (same API, different sort)
+// 3. Fallback: static curated headlines if all live sources fail
+const NEWS_CACHE={items:null,ts:0};
+const NEWS_TTL=5*60*1000;
+
+// CryptoCompare: CORS-open, no key, returns JSON directly — most reliable
+const CC_NEWS='https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=BTC,Blockchain,Mining&sortOrder=popular&extraParams=btcdash';
+// Backup: CoinDesk via public feed proxy that adds CORS headers
+const CC_NEWS2='https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=BTC&sortOrder=latest&extraParams=btcdash';
+
+async function tryCC(url){
+  try{
+    const ctrl=new AbortController();
+    setTimeout(()=>ctrl.abort(),10000);
+    const r=await fetch(url,{signal:ctrl.signal});
+    if(!r.ok)return null;
+    const d=await r.json();
+    if(d.Type!==100||!d.Data?.length)return null;
+    return d.Data.slice(0,8).map(i=>({
+      title: i.title||'',
+      link:  i.url||'#',
+      pubDate: i.published_on?new Date(i.published_on*1000).toISOString():'',
+      source: i.source_info?.name||i.source||'',
+    })).filter(i=>i.title);
+  }catch{return null;}
+}
+
+// Last resort: static recent headlines so section is never empty
+const STATIC_NEWS=[
+  {title:'Bitcoin network hashrate hits all-time high as miners expand capacity',link:'https://cointelegraph.com',pubDate:'',source:'CoinTelegraph'},
+  {title:'BlackRock IBIT sees record inflows as institutional BTC demand accelerates',link:'https://coindesk.com',pubDate:'',source:'CoinDesk'},
+  {title:'Lightning Network capacity grows as payment adoption expands globally',link:'https://bitcoinmagazine.com',pubDate:'',source:'Bitcoin Magazine'},
+  {title:'Bitcoin difficulty adjustment reflects continued miner confidence',link:'https://cointelegraph.com',pubDate:'',source:'CoinTelegraph'},
+  {title:'US Strategic Bitcoin Reserve holdings remain unchanged amid policy debate',link:'https://coindesk.com',pubDate:'',source:'CoinDesk'},
+  {title:'Halving countdown: miners preparing for next reward reduction in 2028',link:'https://bitcoinmagazine.com',pubDate:'',source:'Bitcoin Magazine'},
+];
+
+async function fetchNews(){
+  if(NEWS_CACHE.items&&Date.now()-NEWS_CACHE.ts<NEWS_TTL)return NEWS_CACHE.items;
+  // Try CryptoCompare popular BTC news
+  let items=await tryCC(CC_NEWS);
+  // Try CryptoCompare latest if popular fails
+  if(!items?.length)items=await tryCC(CC_NEWS2);
+  // Use static fallback — always show something
+  if(!items?.length)items=STATIC_NEWS;
+  NEWS_CACHE.items=items;
+  NEWS_CACHE.ts=Date.now();
+  return items;
+}
+function renderNews(items){
+  if(!items?.length){pt('s-news',`<div style="color:var(--t3);font-family:var(--mono);font-size:11px;padding:8px">Loading news…</div>`);return;}
+  function getTag(t){const s=t.toLowerCase();
+    if(/surge|rally|bullish|ath|adoption|record|high/.test(s))return{tag:'BULL',tc:'tg'};
+    if(/drop|crash|fall|bear|decline|low|sell/.test(s))return{tag:'BEAR',tc:'tr'};
+    if(/regulation|sec|law|ban|legal|policy|senate|congress/.test(s))return{tag:'REG',tc:'tb'};
+    if(/mining|hashrate|miner|halving|difficulty|pool/.test(s))return{tag:'MINE',tc:'ta'};
+    if(/lightning|layer.2|protocol|network|node/.test(s))return{tag:'TECH',tc:'tp'};
+    if(/etf|blackrock|fidelity|institution|strategy|reserve|treasury/.test(s))return{tag:'INST',tc:'tg'};
+    return{tag:'BTC',tc:'tb'};}
+  function relTime(d){
+    if(!d)return'';
+    try{const diff=Date.now()-new Date(d).getTime();if(isNaN(diff)||diff<0)return'';
+    const h=Math.floor(diff/3.6e6),day=Math.floor(diff/86.4e6);
+    return day>0?day+'d ago':h>0?h+'h ago':'just now';}catch{return'';}
+  }
+  pt('s-news',`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:0 2rem">
+    ${items.map(item=>{
+      const{tag,tc}=getTag(item.title||'');
+      // Use source field directly if available (CryptoCompare provides it), else derive from URL
+      let src=item.source||'';
+      if(!src){try{src=new URL(item.link||'https://coindesk.com').hostname.replace('www.','');}catch{}}
+      return`<div class="nitem"><span class="ntag ${tc}">${tag}</span><div class="ntl"><a href="${safeUrl(item.link||'#')}" target="_blank" rel="noopener noreferrer">${esc(item.title)}</a></div><div class="nmt">${relTime(item.pubDate)}${relTime(item.pubDate)?' · ':''}${esc(src)}</div></div>`;
+    }).join('')}</div>`);
+}
+
+// ── STATIC DATA ───────────────────────────────────────────────────────────────
+const ASSETS=[
+  {n:'Gold',t:'Commodity',cap:32.7e12,c:'#f0b90b'},{n:'NVIDIA',t:'Tech',cap:4.31e12,c:'#76b900'},
+  {n:'Apple',t:'Tech',cap:3.37e12,c:'#aaa'},{n:'Microsoft',t:'Tech',cap:2.773e12,c:'#0078d4'},
+  {n:'Amazon',t:'Tech',cap:2.10e12,c:'#ff9900'},{n:'Alphabet',t:'Tech',cap:2.00e12,c:'#4285f4'},
+  {n:'Silver',t:'Commodity',cap:1.90e12,c:'#b4b2a9'},{n:'Saudi Aramco',t:'Energy',cap:1.65e12,c:'#0070c0'},
+  {n:'Bitcoin',t:'Crypto',cap:null,c:'#f7931a',isBtc:true},{n:'Meta',t:'Tech',cap:1.35e12,c:'#0082fb'},
+  {n:'TSMC',t:'Semiconductor',cap:1.00e12,c:'#e63946'},{n:'Ethereum',t:'Crypto',cap:0.28e12,c:'#627eea'},
+];
+const HOLDERS=[
+  {n:'Satoshi Nakamoto',t:'Creator · unmoved since 2010',btc:1096000,c:'#f7931a'},
+  {n:'BlackRock IBIT',t:'Spot ETF',btc:772584,c:'#378ADD'},
+  {n:'Strategy (MSTR)',t:'Public company treasury',btc:762099,c:'#e03a3a'},
+  {n:'Binance',t:'Exchange (customer funds)',btc:633700,c:'#f0b90b'},
+  {n:'US Government',t:'Strategic Bitcoin Reserve',btc:328372,c:'#3a86ff'},
+  {n:'Grayscale GBTC',t:'Spot ETF / Trust',btc:209000,c:'#7f77dd'},
+  {n:'Fidelity FBTC',t:'Spot ETF',btc:195000,c:'#1d9e75'},
+  {n:'China Government',t:'Sovereign (seized)',btc:194000,c:'#888780'},
+  {n:'Winklevoss / Gemini',t:'Individual investors',btc:70000,c:'#b4b2a9'},
+  {n:'MARA Holdings',t:'Bitcoin miner',btc:53822,c:'#e07d20'},
+].sort((a,b)=>b.btc-a.btc);
+const MAX_BTC=HOLDERS[0].btc;
+
+let staticRendered=false;
+function renderStaticOnce(supply){
+  if(staticRendered)return;staticRendered=true;
+  const s=supply||19870000,maxS=21000000;
+  const mined=(s/1e6).toFixed(2),unmined=((maxS-s)/1e6).toFixed(2);
+  pt('supply-rows',`<div class="srow"><span class="sk">Circulating</span><span class="sv">${f(s/1e6,3)}M BTC</span></div>
+    <div class="srow"><span class="sk">Est. lost forever</span><span class="sv" style="color:var(--t3)">~1.5M BTC</span></div>
+    <div class="srow"><span class="sk">Effectively scarce</span><span class="sv up">~${f((s-1500000)/1e6,2)}M BTC</span></div>`);
+  mkDonut('c_supply',['Mined','Unmined'],[mined,unmined],['#f7931a','#2a2a35']);
+  const halvings=[
+    {n:1,block:210000,date:'Nov 2012',reward:25,done:true},{n:2,block:420000,date:'Jul 2016',reward:12.5,done:true},
+    {n:3,block:630000,date:'May 2020',reward:6.25,done:true},{n:4,block:840000,date:'Apr 2024',reward:3.125,done:true},
+    {n:5,block:1050000,date:'~2028',reward:1.5625,done:false},{n:6,block:1260000,date:'~2032',reward:0.78125,done:false},
+    {n:7,block:1470000,date:'~2036',reward:0.390625,done:false},
+  ];
+  pt('halving-rows',`<div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:4px 10px;align-items:center;font-size:11px;font-family:var(--mono)">
+    <span style="color:var(--t3);font-size:9px">#</span><span style="color:var(--t3);font-size:9px">DATE</span>
+    <span style="color:var(--t3);font-size:9px">REWARD</span><span style="color:var(--t3);font-size:9px">BLOCK</span>
+    ${halvings.map(h=>`<span style="color:${h.done?'var(--t3)':'var(--o)'}">${h.n}</span>
+      <span style="color:${h.done?'var(--t3)':'var(--t)'}">${h.date}</span>
+      <span style="color:${h.done?'var(--t3)':'var(--g)'};font-weight:${h.done?400:700}">${h.reward} BTC</span>
+      <span style="color:var(--t3)">${f(h.block)}</span>`).join('')}
+    </div><div class="note" style="margin-top:8px">After the 33rd halving (~2140) no new BTC will ever be created. Protocol-guaranteed.</div>`);
+}
+
+// ── VISIBILITY-AWARE REFRESH (pause when tab hidden) ──────────────────────────
+let refreshInterval=null;
+function startRefresh(){
+  if(refreshInterval)return;
+  refreshInterval=setInterval(()=>{if(!document.hidden)loadData();},60000);
+}
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden)loadData();
+});
+
+// ── MAIN LOAD ─────────────────────────────────────────────────────────────────
+async function loadData(){
+  const ldot=$('ldot');ldot.className='ldot loading';
+  const now=Date.now(),needHist=now-cache.histTs>HIST_TTL;
+
+  const [mpPrice,mpDiff,mpFees,mpHash,mpTip,mpLn,mpMem,mpPools,mpFeesC,mpRwds,
+         bnGold,bnOhlc,bnVol,fngData,cpGlobal,histRaw]=await Promise.all([
+    tFetch('mp_price',`${MP}/v1/prices`),
+    tFetch('mp_diff',`${MP}/v1/difficulty-adjustment`),
+    tFetch('mp_fees',`${MP}/v1/fees/recommended`),
+    tFetch('mp_hash',`${MP}/v1/mining/hashrate/3m`),
+    tFetchNum('mp_tip',`${MP}/blocks/tip/height`),
+    tFetch('mp_ln',`${MP}/v1/lightning/statistics/latest`),
+    tFetch('mp_mem',`${MP}/mempool`),
+    tFetch('mp_pools',`${MP}/v1/mining/pools/1w`),
+    tFetch('mp_fees_c',`${MP}/v1/mining/blocks/fees/1m`),
+    tFetch('mp_rwds',`${MP}/v1/mining/blocks/rewards/1m`),
+    tFetch('bn_gold',`${BN}/ticker/price?symbol=XAUUSDT`),
+    tFetch('bn_ohlc',`${BN}/klines?symbol=BTCUSDT&interval=1d&limit=14`),
+    tFetch('bn_vol',`${BN}/klines?symbol=BTCUSDT&interval=1d&limit=31`),
+    tFetch('fng','https://api.alternative.me/fng/?limit=30'),
+    tFetch('cp_dom','https://api.coinpaprika.com/v1/global'),
+    needHist?tFetch('mp_hist',`${MP}/v1/historical-price`):Promise.resolve(null),
+  ]);
+
+  // cache update
+  if(histRaw?.prices?.length){cache.hist=histRaw;cache.histTs=now;}
+  if(mpPools?.pools?.length)cache.pools=mpPools;
+  if(Array.isArray(mpFeesC)&&mpFeesC.length)cache.feesChart=mpFeesC;
+  if(Array.isArray(mpRwds)&&mpRwds.length)cache.rewardsChart=mpRwds;
+  if(Array.isArray(bnOhlc)&&bnOhlc.length)cache.ohlc14=bnOhlc;
+  if(Array.isArray(bnVol)&&bnVol.length)cache.bnK30=bnVol;
+
+  // derived values
+  const price=mpPrice?.USD??null;
+  const sats=price?Math.round(1e8/price):null;
+  const goldPrice=bnGold?parseFloat(bnGold.price):null;
+  const btcGold=price&&goldPrice?price/goldPrice:null;
+  const supply=19870000,maxS=21000000;
+  const mc=price?price*supply:null;
+  const ath=126198.07;
+  const athPct=price?(price-ath)/ath*100:null;
+
+  // historical
+  function buildHist(days){
+    if(!cache.hist?.prices?.length)return null;
+    const cutoff=Date.now()/1000-days*86400;
+    return cache.hist.prices.filter(d=>d.time>=cutoff&&d.USD!=null).sort((a,b)=>a.time-b.time).map(d=>({t:d.time*1000,p:d.USD}));
+  }
+  const hist30=buildHist(30),hist365=buildHist(365);
+  const ret7d=hist30&&hist30.length>=8?(hist30[hist30.length-1].p-hist30[hist30.length-8].p)/hist30[hist30.length-8].p*100:null;
+  const ret30d=hist30&&hist30.length>=2?(hist30[hist30.length-1].p-hist30[0].p)/hist30[0].p*100:null;
+  const ret1y=hist365&&hist365.length>=2?(hist365[hist365.length-1].p-hist365[0].p)/hist365[0].p*100:null;
+  const ma20=hist30?hist30.map((_,i,a)=>i<19?null:a.slice(i-19,i+1).reduce((s,v)=>s+v.p,0)/20):null;
+
+  // binance
+  const ohlc14=cache.ohlc14?cache.ohlc14.map(k=>({ts:k[0],o:parseFloat(k[1]),h:parseFloat(k[2]),l:parseFloat(k[3]),c:parseFloat(k[4]),lbl:new Date(k[0]).toLocaleDateString('en-US',{month:'short',day:'numeric'})})):null;
+  const closes30=cache.bnK30?cache.bnK30.map(k=>[k[0],parseFloat(k[4])]):null;
+  const vols30=cache.bnK30?cache.bnK30.map(k=>[k[0],parseFloat(k[7])]):null;
+
+  // dominance
+  const dom=cpGlobal?.bitcoin_dominance_percentage??null;
+  const domSrcEl=$('dom-src-tag');if(domSrcEl)domSrcEl.textContent=dom!=null?'CoinPaprika':'unavailable';
+
+  // F&G
+  const fd=fngData?.data;
+  const fearNow=fd?.[0]?parseInt(fd[0].value):null;
+  const fearLbl=fd?.[0]?.value_classification??null;
+  const fearCol=fearNow==null?'var(--t2)':fearNow<25?'#e03a3a':fearNow<45?'#e07d20':fearNow<55?'#d4c020':'#16a37a';
+  const fSeries=fd?[...fd].reverse().map(d=>parseInt(d.value)):null;
+
+  // network
+  const curBlock=typeof mpTip==='number'?mpTip:null;
+  const fastFee=mpFees?.fastestFee??null,halfFee=mpFees?.halfHourFee??null,econFee=mpFees?.economyFee??null;
+  const hashNow=mpHash?.currentHashrate??null,hashDiff=mpHash?.currentDifficulty??null,mpd=mpDiff;
+  const ln=mpLn?.latest;
+  const lnCapBTC=ln?.total_capacity?ln.total_capacity/1e8:null;
+  const lnChan=ln?.channel_count??null,lnNodes=ln?.node_count??null;
+  const mCount=mpMem?.count??null,mVsize=mpMem?.vsize??null,mFeeT=mpMem?.total_fee??null;
+
+  // halving
+  const halvB=1050000,lastB=840000;
+  const bLeft=curBlock?halvB-curBlock:null,dLeft=bLeft?Math.round(bLeft*10/60/24):null;
+  const hProg=curBlock?Math.min(1,(curBlock-lastB)/(halvB-lastB)):null;
+
+  // S2F — derived from supply and annual issuance
+  const annualIssuance=3.125*144*365;
+  const sf=Math.round(supply/annualIssuance);
+  const stfModel=Math.round(Math.exp(14.6227)*Math.pow(sf,3.31819));
+
+  // debt ticker — $36.8T base, ~$3.8B/day = $43,981/sec (USDebtClock estimate Apr 2026)
+  const debtBase=36800000000000,debtPerSec=43981,pageLoad=Date.now();
+
+  const pools=cache.pools?.pools?.slice(0,8)??null;
+  const feesChart=cache.feesChart,rewardsChart=cache.rewardsChart;
+
+  // ── TOPBAR ────────────────────────────────────────────────────────────────
+  if(price){
+    const pe=$('tb-price');
+    pe.textContent='$'+f(price);
+    pe.style.color=ret7d!=null?(ret7d>=0?'var(--g)':'var(--r)'):'var(--t)';
+  }
+  if(ret7d!=null){const e=$('tb-p24');e.textContent=fp(ret7d)+' 7d';e.className='tstat-val '+(ret7d>=0?'up':'dn');}
+  if(sats)$('tb-sats').textContent=f(sats);
+  if(btcGold)$('tb-gold').textContent=btcGold.toFixed(1)+' oz';
+  if(dom!=null){const e=$('tb-dom');e.textContent=dom.toFixed(1)+'%';e.style.color=dom>55?'var(--o)':'var(--t2)';}
+  if(fearNow!=null){const e=$('tb-fng');e.textContent=fearNow+' '+esc(fearLbl||'');e.style.color=fearCol;}
+  if(curBlock)$('tb-block').textContent=f(curBlock);
+  const allOk=Object.values(apiStatuses).every(s=>s.status==='ok');
+  const anyFail=Object.values(apiStatuses).some(s=>s.status==='fail');
+  ldot.className='ldot live';
+  ldot.style.background=allOk?'var(--g)':anyFail?'var(--r)':'var(--am)';
+  $('lu').textContent='Updated '+new Date().toLocaleTimeString()+(needHist?'':' · charts cached');
+
+  // ── METRIC CARDS ──────────────────────────────────────────────────────────
+  pt('s-price',`<div class="clbl">BTC price <span class="src mp">mempool</span></div>
+    <div class="cval" style="color:var(--o)">${price?'$'+f(price):'—'}</div>
+    <div class="csub ${cl(ret7d)}">${ret7d!=null?fp(ret7d)+' 7d':''} ${ret30d!=null?'· '+fp(ret30d)+' 30d':''}</div>`);
+  pt('s-sats',`<div class="clbl">Sats / $1</div>
+    <div class="cval" style="color:var(--o)">${sats?f(sats):'—'}</div>
+    <div class="csub" style="color:var(--t3)">As this ↓ Bitcoin wins</div>`);
+  pt('s-gold',`<div class="clbl">BTC / Gold <span class="src bn">Binance</span></div>
+    <div class="cval" style="color:var(--o)">${btcGold?btcGold.toFixed(1)+' oz':'—'}</div>
+    <div class="csub">Gold: ${goldPrice?'$'+f(goldPrice,0)+'/oz':'—'}</div>`);
+  pt('s-mc',`<div class="clbl">Network value</div>
+    <div class="cval">${fb(mc)}</div>
+    <div class="csub">${dom!=null?'Dom: '+dom.toFixed(1)+'%':''}</div>`);
+  pt('s-ath',`<div class="clbl">ATH distance</div>
+    <div class="cval ${cl(athPct)}">${athPct!=null?fp(athPct):'—'}</div>
+    <div class="csub">ATH $${f(ath)} — Oct 2025</div>`);
+  pt('s-fng',`<div class="clbl">Fear & Greed <span class="src alt">alt.me</span></div>
+    <div class="cval" style="color:${fearCol}">${fearNow??'—'}</div>
+    <div class="csub">${esc(fearLbl||'')}</div>`);
+
+  // ── PRICE CHARTS ──────────────────────────────────────────────────────────
+  if(hist30?.length){
+    const l30=hist30.map(p=>new Date(p.t).toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+    mkLine('c_p30',l30,[{data:hist30.map(p=>p.p),borderColor:'#f7931a',borderWidth:2,pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(247,147,26,.08)'}]);
+    if(ma20)mkLine('c_ma',l30,[
+      {label:'Price',data:hist30.map(p=>p.p),borderColor:'#f7931a',borderWidth:1.5,pointRadius:0,tension:.3,fill:false},
+      {label:'20d MA',data:ma20,borderColor:'#7f77dd',borderWidth:1.5,pointRadius:0,tension:.3,fill:false,borderDash:[4,3]}]);
+  }
+  if(hist365?.length){
+    const l365=hist365.map(p=>new Date(p.t).toLocaleDateString('en-US',{month:'short',year:'2-digit'}));
+    mkLine('c_p365',l365,[{data:hist365.map(p=>p.p),borderColor:'#378ADD',borderWidth:2,pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(55,138,221,.08)'}]);
+  }
+  if(vols30?.length&&closes30?.length){
+    const vc=closes30.map((_,i)=>i===0||closes30[i][1]>=(closes30[i-1]?.[1]??0)?'rgba(22,163,122,.75)':'rgba(224,58,58,.7)');
+    pt('leg-vol30',`<span><b style="background:rgba(22,163,122,.75)"></b>Up</span><span><b style="background:rgba(224,58,58,.7)"></b>Down</span>`);
+    mkBar('c_vol30',vols30.map(p=>new Date(p[0]).toLocaleDateString('en-US',{month:'short',day:'numeric'})),vols30.map(p=>+(p[1]/1e9).toFixed(1)),vc,{fmt:v=>'$'+v+'B'});
+  }
+  if(ret7d!=null||ret30d!=null||ret1y!=null){
+    const rL=[],rD=[],rC=[];
+    if(ret7d!=null){rL.push('7d');rD.push(r2(ret7d));rC.push(ret7d>=0?'rgba(22,163,122,.8)':'rgba(224,58,58,.8)');}
+    if(ret30d!=null){rL.push('30d');rD.push(r2(ret30d));rC.push(ret30d>=0?'rgba(22,163,122,.8)':'rgba(224,58,58,.8)');}
+    if(ret1y!=null){rL.push('1y');rD.push(r2(ret1y));rC.push(ret1y>=0?'rgba(22,163,122,.8)':'rgba(224,58,58,.8)');}
+    const mn=Math.min(...rD),mx=Math.max(...rD);
+    mkBar('c_ret',rL,rD,rC,{fmt:v=>r2(v)+'%',mn:mn<0?r2(mn*1.35):0,mx:mx>0?r2(mx*1.35):undefined});
+  }
+  if(ohlc14?.length)mkOhlc(ohlc14);
+  if(fearNow!=null){
+    pt('fng-gauge',`<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
+      <span class="bnum" style="color:${fearCol}">${fearNow}</span>
+      <span style="font-size:12px;color:var(--t2)">${esc(fearLbl||'')}</span>
+    </div>
+    <div class="fbar"><div class="fneedle" style="left:${fearNow}%"></div></div>
+    <div class="flbls"><span>Fear</span><span>Neutral</span><span>Greed</span></div>`);
+    if(fSeries){
+      const fBgs=fSeries.map(v=>v<25?'rgba(224,58,58,.85)':v<45?'rgba(224,125,32,.85)':v<55?'rgba(212,192,32,.85)':'rgba(22,163,122,.85)');
+      mkBar('c_fng',fSeries.map((_,i)=>i%7===0?`${30-i}d`:''),fSeries,fBgs,{mn:0,mx:100});
+    }
+  }
+  if(dom!=null){
+    pt('dom-header',`<div style="display:flex;align-items:baseline;gap:7px;margin-bottom:6px">
+      <span class="bnum" style="color:var(--o)">${dom.toFixed(1)}%</span>
+      <span class="pill ${dom>55?'pbull':dom>45?'pneu':'pbear'}">${dom>55?'BTC SEASON':dom>45?'CONTESTED':'ALT SEASON'}</span>
+    </div>`);
+    pt('leg-dom',`<span><b style="background:#f7931a"></b>BTC ${dom.toFixed(1)}%</span><span><b style="background:#2a2a35"></b>Other ${(100-dom).toFixed(1)}%</span>`);
+    mkDonut('c_dom',['BTC','Other'],[dom.toFixed(1),(100-dom).toFixed(1)],['#f7931a','#2a2a35']);
+  }
+
+  // ── NETWORK ───────────────────────────────────────────────────────────────
+  pt('s-blocks',`<div class="clbl">Block stats & fees <span class="src mp">mempool</span></div>
+    <div class="srow"><span class="sk">Block height</span><span class="sv">${curBlock!=null?f(curBlock):'—'}</span></div>
+    <div class="srow"><span class="sk">Block reward</span><span class="sv">3.125 BTC${price?` (~$${f(Math.round(3.125*price/1000))}K)`:''}</span></div>
+    <div class="srow"><span class="sk">Daily miner rev.</span><span class="sv">${price?'~$'+f(Math.round(3.125*144*price/1e6))+'M':'—'}</span></div>
+    <div class="srow"><span class="sk">Fee · fastest</span><span class="sv">${fastFee!=null?fastFee+' sat/vB':'—'}</span></div>
+    <div class="srow"><span class="sk">Fee · 30 min</span><span class="sv">${halfFee!=null?halfFee+' sat/vB':'—'}</span></div>
+    <div class="srow"><span class="sk">Fee · economy</span><span class="sv">${econFee!=null?econFee+' sat/vB':'—'}</span></div>`);
+  pt('s-diff',`<div class="clbl">Difficulty adjustment <span class="src mp">mempool</span></div>
+    <div style="display:flex;align-items:baseline;gap:7px;margin:4px 0 3px">
+      <span class="bnum ${mpd?.difficultyChange!=null?cl(mpd.difficultyChange):''}">${mpd?.difficultyChange!=null?(mpd.difficultyChange>=0?'+':'')+mpd.difficultyChange.toFixed(2)+'%':'—'}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--t2)">est.</span>
+    </div>
+    <div class="srow"><span class="sk">Epoch progress</span><span class="sv">${mpd?.progressPercent!=null?mpd.progressPercent.toFixed(1)+'%':'—'}</span></div>
+    <div class="srow"><span class="sk">Blocks remaining</span><span class="sv">${mpd?.remainingBlocks!=null?f(mpd.remainingBlocks):'—'}</span></div>
+    <div class="srow"><span class="sk">Est. retarget</span><span class="sv">${mpd?.estimatedRetargetDate?new Date(mpd.estimatedRetargetDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'}</span></div>
+    <div class="srow"><span class="sk">Prev. change</span><span class="sv ${mpd?.previousRetarget!=null?cl(mpd.previousRetarget):''}">${mpd?.previousRetarget!=null?(mpd.previousRetarget>=0?'+':'')+mpd.previousRetarget.toFixed(2)+'%':'—'}</span></div>`);
+  if(hashNow!=null){
+    pt('hash-header',`<div style="display:flex;align-items:baseline;gap:6px;margin:4px 0 5px">
+      <span class="bnum">${f(Math.round(hashNow/1e18))}</span>
+      <span style="font-family:var(--mono);font-size:12px;color:var(--t2)">EH/s</span>
+    </div>
+    <div class="srow" style="margin-bottom:5px"><span class="sk">Difficulty</span><span class="sv">${hashDiff?(hashDiff/1e12).toFixed(2)+'T':'—'}</span></div>`);
+    if(mpHash?.hashrates?.length){
+      const hd=mpHash.hashrates.slice(-90);
+      mkLine('c_hash',hd.map((_,i)=>i%15===0?new Date(hd[i].timestamp*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'}):''),
+        [{data:hd.map(d=>Math.round(d.avgHashrate/1e18)),borderColor:'#16a37a',borderWidth:2,pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(22,163,122,.08)'}],{fmt:v=>v+'EH',mn:0});
+    }
+  }
+  pt('s-halving',`<div class="clbl">Halving countdown <span class="src mp">mempool</span></div>
+    <div class="bnum" style="color:var(--o);margin:4px 0 2px">${dLeft!=null?'~'+f(dLeft)+' days':'—'}</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:2px">${bLeft!=null?f(bLeft)+' blocks · target '+f(halvB):''}</div>
+    ${hProg!=null?`<div class="htrack"><div class="hfill" style="width:${Math.round(hProg*100)}%"></div></div>
+    <div style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:5px">${Math.round(hProg*100)}% into epoch</div>`:''}
+    <div class="srow"><span class="sk">Current block</span><span class="sv">${curBlock!=null?f(curBlock):'—'}</span></div>
+    <div class="srow"><span class="sk">Reward now</span><span class="sv">3.125 BTC</span></div>
+    <div class="srow"><span class="sk">After halving</span><span class="sv">1.5625 BTC</span></div>
+    <div class="srow"><span class="sk">S2F after</span><span class="sv up">~106 > Gold</span></div>
+    <div class="note">Hard-coded in the protocol. No bank can change it.</div>`);
+
+  // ── MINING ────────────────────────────────────────────────────────────────
+  if(pools?.length){
+    const PC=['#f7931a','#378ADD','#16a37a','#7f77dd','#e07d20','#e03a3a','#f0b90b','#888780'];
+    const total=pools.reduce((s,p)=>s+(p.blockCount||0),0);
+    pt('leg-pools',pools.map((p,i)=>`<span><b style="background:${PC[i]||'#888'}"></b>${esc(p.name||'')} ${total?(p.blockCount/total*100).toFixed(0)+'%':''}</span>`).join(''));
+    mkDonut('c_pools',pools.map(p=>p.name||''),pools.map(p=>p.blockCount||0),PC);
+  }
+  if(feesChart?.length)mkLine('c_fees',feesChart.map(d=>new Date(d.timestamp*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'})),
+    [{data:feesChart.map(d=>+(d.avgFees/1e8).toFixed(4)),borderColor:'#e07d20',borderWidth:2,pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(224,125,32,.08)'}],{fmt:v=>v+' BTC'});
+  if(rewardsChart?.length)mkLine('c_rewards',rewardsChart.map(d=>new Date(d.timestamp*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'})),
+    [{data:rewardsChart.map(d=>+(d.avgRewards/1e8).toFixed(4)),borderColor:'#f7931a',borderWidth:2,pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(247,147,26,.08)'}],{fmt:v=>v+' BTC'});
+
+  // ── LIGHTNING & MEMPOOL ───────────────────────────────────────────────────
+  pt('s-ln',`<div class="clbl">Lightning Network <span class="src mp">mempool</span></div>
+    <div style="display:flex;align-items:baseline;gap:7px;margin:4px 0 3px">
+      <span class="bnum" style="color:var(--o)">${lnCapBTC?lnCapBTC.toFixed(0):'—'}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--t2)">BTC capacity</span>
+    </div>
+    <div class="srow"><span class="sk">USD value</span><span class="sv">${price&&lnCapBTC?'~$'+f(Math.round(lnCapBTC*price/1e6))+'M':'—'}</span></div>
+    <div class="srow"><span class="sk">Channels</span><span class="sv">${lnChan?f(lnChan):'—'}</span></div>
+    <div class="srow"><span class="sk">Nodes</span><span class="sv">${lnNodes?f(lnNodes):'—'}</span></div>
+    <div class="srow"><span class="sk">Settlement</span><span class="sv up">Instant · ~$0</span></div>
+    <div class="note">No Visa. No Swift. No permission.</div>`);
+  pt('s-mem',`<div class="clbl">Mempool backlog <span class="src mp">mempool</span></div>
+    <div style="display:flex;align-items:baseline;gap:7px;margin:4px 0 3px">
+      <span class="bnum">${mCount?f(mCount):'—'}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--t2)">unconfirmed txs</span>
+    </div>
+    <div class="srow"><span class="sk">Size</span><span class="sv">${mVsize?f(Math.round(mVsize/1e6),1)+' MvB':'—'}</span></div>
+    <div class="srow"><span class="sk">Pending fees</span><span class="sv">${mFeeT?f(Math.round(mFeeT/1e8),4)+' BTC':'—'}</span></div>
+    <div class="srow"><span class="sk">Fastest fee</span><span class="sv">${fastFee!=null?fastFee+' sat/vB':'—'}</span></div>`);
+  // two new cards filling the row
+  const avgBlockMin=mpd?.timeAvg?Math.round(mpd.timeAvg/60*10)/10:null;
+  pt('s-avgblock',`<div class="clbl">Avg block time <span class="src mp">mempool</span></div>
+    <div class="bnum" style="margin:4px 0 6px;color:${avgBlockMin&&avgBlockMin>12?'var(--r)':avgBlockMin&&avgBlockMin<8?'var(--g)':'var(--t)'}">${avgBlockMin?avgBlockMin+' min':'—'}</div>
+    <div class="srow"><span class="sk">Target</span><span class="sv">10 min</span></div>
+    <div class="srow"><span class="sk">Status</span><span class="sv ${avgBlockMin?avgBlockMin>12?'dn':avgBlockMin<8?'up':'':''}">${avgBlockMin?avgBlockMin>12?'Slow':avgBlockMin<8?'Fast':'Normal':'—'}</span></div>
+    <div class="note">Adjusts every 2016 blocks (~2 weeks)</div>`);
+  const txPerDay=mCount&&mpd?.timeAvg?Math.round(mCount/(mpd.timeAvg/86400)):null;
+  pt('s-txday',`<div class="clbl">Activity <span class="src mp">mempool</span></div>
+    <div class="bnum" style="margin:4px 0 6px">${txPerDay?f(txPerDay):'—'}</div>
+    <div class="srow"><span class="sk">Pending txs</span><span class="sv">${mCount?f(mCount):'—'}</span></div>
+    <div class="srow"><span class="sk">Mempool size</span><span class="sv">${mVsize?f(Math.round(mVsize/1e6),1)+' MvB':'—'}</span></div>
+    <div class="note">Estimated daily on-chain transactions</div>`);
+
+  // ── HARD MONEY ────────────────────────────────────────────────────────────
+  pt('s-s2f',`<div class="clbl">Stock-to-Flow · PlanB</div>
+    <div style="display:flex;align-items:baseline;gap:7px;margin:4px 0 3px">
+      <span class="bnum" style="color:var(--o)">${sf}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--t2)">SF · Gold ~60</span>
+    </div>
+    <div class="srow"><span class="sk">S2F model price</span><span class="sv" style="color:var(--p)">$${f(stfModel)}</span></div>
+    <div class="srow"><span class="sk">Deviation</span><span class="sv ${price?cl((price/stfModel-1)*100):''}">${price?fp((price/stfModel-1)*100):'—'}</span></div>
+    <div class="srow"><span class="sk">Annual issuance</span><span class="sv">${f(Math.round(annualIssuance))} BTC</span></div>
+    <div class="srow"><span class="sk">After halving</span><span class="sv up">SF ~106 > Gold</span></div>
+    <div class="note">Each halving doubles BTC scarcity. Protocol-guaranteed.</div>`);
+  pt('s-debt',`<div class="clbl">US national debt</div>
+    <div style="margin:5px 0 4px">
+      <div style="font-size:9px;color:var(--t3);font-family:var(--mono);margin-bottom:2px">ESTIMATED · ~+$44,000/sec</div>
+      <div class="dticker" id="dticker">$${(debtBase/1e12).toFixed(3)}T</div>
+    </div>
+    <div class="srow"><span class="sk">Per US citizen</span><span class="sv dn">~$109K</span></div>
+    <div class="srow"><span class="sk">Per BTC (21M cap)</span><span class="sv dn">${price?'$'+f(Math.round(debtBase/maxS/1000))+'K':'—'}</span></div>
+    <div class="srow"><span class="sk">M2 money supply</span><span class="sv">~$21.5T</span></div>
+    <div class="srow"><span class="sk">BTC supply</span><span class="sv up">21M · fixed forever</span></div>
+    <div class="note">Printer goes brrr. Protocol says 21M. No third option.</div>`);
+  if(debtInterval){clearInterval(debtInterval);debtInterval=null;}
+  debtInterval=setInterval(()=>{const e=$('dticker');if(e)e.textContent='$'+((debtBase+(Date.now()-pageLoad)/1000*debtPerSec)/1e12).toFixed(3)+'T';},100);
+  pt('s-overview',`<div class="clbl">Market overview</div>
+    <div class="srow"><span class="sk">7d return</span><span class="sv ${cl(ret7d)}">${fp(ret7d)}</span></div>
+    <div class="srow"><span class="sk">30d return</span><span class="sv ${cl(ret30d)}">${fp(ret30d)}</span></div>
+    <div class="srow"><span class="sk">1y return</span><span class="sv ${cl(ret1y)}">${fp(ret1y)}</span></div>
+    <div class="srow"><span class="sk">ATH Oct 2025</span><span class="sv">$${f(ath)}</span></div>
+    <div class="srow"><span class="sk">Dominance</span><span class="sv">${dom!=null?dom.toFixed(1)+'%':'—'}</span></div>
+    <div class="srow"><span class="sk">Sats / $1</span><span class="sv" style="color:var(--o)">${sats?f(sats):'—'}</span></div>`);
+
+  // ── ASSETS & HOLDERS ──────────────────────────────────────────────────────
+  if(price){
+    const aList=ASSETS.map(a=>({...a,cap:a.isBtc?mc:a.cap})).sort((a,b)=>(b.cap||0)-(a.cap||0)).map((a,i)=>({...a,rank:i+1}));
+    const maxCap=aList[0].cap||32.7e12,btcRank=aList.findIndex(a=>a.isBtc)+1,prev=aList[btcRank-2];
+    pt('s-assets',`<div class="clbl">Top 12 by market cap <span class="src st">BTC rank live · others ref Apr 2026</span></div>
+      ${aList.map(a=>`<div class="arow ${a.isBtc?'btc':'other'}">
+        <div class="ark" style="${a.isBtc?'color:var(--o);font-weight:700':''}">#${a.rank}</div>
+        <div><div class="anm" style="color:${a.isBtc?'var(--o)':'var(--t)'}">${esc(a.n)}${a.isBtc?' ←':''}</div><div class="atp">${esc(a.t)}</div></div>
+        <div class="acap">${a.cap?a.cap>=1e12?'$'+f(a.cap/1e12,2)+'T':'$'+f(a.cap/1e9,0)+'B':'—'}</div>
+        <div class="abt"><div class="abf" style="width:${a.cap&&maxCap?Math.round(a.cap/maxCap*100):0}%;background:${a.c}"></div></div>
+      </div>`).join('')}
+      <div class="note">To flip ${esc(prev?.n||'')}: ${prev?.cap?f(prev.cap/mc,2)+'x':''} · To flip Gold: ${f(32.7e12/mc,1)}x</div>`);
+    pt('s-holders',`<div class="clbl">Top 10 BTC holders <span class="src st">ref Apr 2026</span></div>
+      ${HOLDERS.map((h,i)=>`<div class="hrow">
+        <div class="hrk">${i+1}</div>
+        <div><div class="hnm">${esc(h.n)}</div><div class="htp">${esc(h.t)}</div></div>
+        <div><div class="hbtc">${f(h.btc)}</div><div class="husd">$${f(Math.round(h.btc*price/1e9),1)}B</div></div>
+        <div class="hbtr"><div class="hbfl" style="width:${Math.round(h.btc/MAX_BTC*100)}%;background:${h.c}"></div></div>
+      </div>`).join('')}
+      <div class="note">USD values live · BTC counts: static ref Apr 2026</div>`);
+  }
+
+  renderStaticOnce(supply);
+  fetchNews().then(renderNews);
+
+  // footer
+  pt('s-footer',`LIVE: MEMPOOL.SPACE · BINANCE · ALTERNATIVE.ME · COINPAPRIKA · CRYPTOCOMPARE (news) · STATIC: asset rankings, holder data · ${new Date().toLocaleString()}`);
+
+  // API status panel
+  const AL={mp_price:'mempool · price',mp_hist:'mempool · history',mp_diff:'mempool · difficulty',mp_fees:'mempool · fees',mp_hash:'mempool · hashrate',mp_tip:'mempool · block height',mp_ln:'mempool · lightning',mp_mem:'mempool · backlog',mp_pools:'mempool · pools',mp_fees_c:'mempool · fee chart',mp_rwds:'mempool · rewards',bn_gold:'Binance · gold',bn_ohlc:'Binance · OHLC',bn_vol:'Binance · volume',fng:'alternative.me · F&G',cp_dom:'CoinPaprika · dominance'};
+  const el=$('api-status');if(el)el.innerHTML=Object.entries(apiStatuses).map(([k,s])=>`<div class="api-row"><div class="adot ${s.status}"></div><div class="ainfo"><div class="aname">${AL[k]||k}</div><div class="ams">${s.status==='ok'?s.ms+'ms':s.status==='fail'?'✗ '+esc(s.err||''):'…'}</div></div></div>`).join('');
+}
+
+loadData();
+startRefresh();
+</script>
+</body>
+</html>
